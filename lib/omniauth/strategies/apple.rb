@@ -41,8 +41,8 @@ module OmniAuth
           iss: options.team_id,
           aud: 'https://appleid.apple.com',
           sub: options.client_id,
-          iat: Time.current,
-          exp: 1.minutes.after
+          iat: (now = Time.respond_to?(:current) ? Time.current : Time.now),
+          exp: now + 60
         )
         jwt.kid = options.key_id
         jwt.sign(private_key).to_s
