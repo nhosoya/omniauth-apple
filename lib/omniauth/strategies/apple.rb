@@ -47,7 +47,7 @@ module OmniAuth
           iat: Time.now.to_i,
           exp: Time.now.to_i + 60
         }
-        headers = { kid: options[:key_id] }
+        headers = { alg: 'ES256', kid: options[:key_id] }
 
         ::JWT.encode(payload, private_key, 'ES256', headers)
       end
