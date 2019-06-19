@@ -37,6 +37,7 @@ module OmniAuth
         log(:info, "id_token: #{access_token.params['id_token']}")
         @id_info ||= ::JWT.decode(access_token.params['id_token'], nil, false)[0] # payload after decoding
         log(:info, "id_info: #{@id_info}")
+        @id_info
       end
 
       def client_secret
