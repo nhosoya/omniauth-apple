@@ -6,7 +6,6 @@ module OmniAuth
   module Strategies
     class Apple < OmniAuth::Strategies::OAuth2
       attr_reader :id_info
-      args %i[client_id team_id key_id pem]
 
       option :name, 'apple'
       option :client_options,
@@ -36,6 +35,7 @@ module OmniAuth
       def build_access_token
         _access_token = super
         @id_info = ::JWT.decode(_access_token.params['id_token'], nil, false)
+        log(:info, @id_info)
         _access_token
       end
 
@@ -43,19 +43,19 @@ module OmniAuth
 
       def client_secret
         payload = {
-          iss: options.team_id,
+          iss: options[:team_id],
           aud: 'https://appleid.apple.com',
-          sub: options.client_id,
+          sub: options[:client_id],
           iat: Time.now.to_i,
           exp: Time.now.to_i + 60
         }
-        headers = { kid: options.key_id }
+        headers = { kid: options[:key_id] }
 
         ::JWT.encode(payload, private_key, 'ES256', headers)
       end
 
       def private_key
-        OpenSSL::PKey::EC.new(options.pem)
+        OpenSSL::PKey::EC.new(options[:pem])
       end
     end
   end
