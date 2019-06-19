@@ -5,9 +5,8 @@ require 'omniauth-oauth2'
 module OmniAuth
   module Strategies
     class Apple < OmniAuth::Strategies::OAuth2
-      attr_reader :id_info
-
       option :name, 'apple'
+
       option :client_options,
              site: 'https://appleid.apple.com',
              authorize_url: '/auth/authorize',
@@ -32,14 +31,13 @@ module OmniAuth
         options[:redirect_uri] || (full_host + script_name + callback_path)
       end
 
-      def build_access_token
-        _access_token = super
-        @id_info = ::JWT.decode(_access_token.params['id_token'], nil, false)
-        log(:info, @id_info)
-        _access_token
-      end
-
       private
+
+      def id_info
+        log(:info, "id_token: #{access_token.params['id_token']}")
+        @id_info ||= ::JWT.decode(access_token.params['id_token'], nil, false)[0] # payload after decoding
+        log(:info, "id_info: #{@id_info}")
+      end
 
       def client_secret
         payload = {
