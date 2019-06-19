@@ -26,7 +26,7 @@ module OmniAuth
       end
 
       def client
-        OAuth2::Client.new(options.client_id, client_secret, deep_symbolize(options.client_options))
+        ::OAuth2::Client.new(options.client_id, client_secret, deep_symbolize(options.client_options))
       end
 
       def callback_url
@@ -35,7 +35,7 @@ module OmniAuth
 
       def build_access_token
         _access_token = super
-        @id_info = JWT.decode(_access_token.params['id_token'], nil, false)
+        @id_info = ::JWT.decode(_access_token.params['id_token'], nil, false)
         _access_token
       end
 
@@ -51,7 +51,7 @@ module OmniAuth
         }
         headers = { kid: options.key_id }
 
-        JWT.encode(payload, private_key, 'ES256', headers)
+        ::JWT.encode(payload, private_key, 'ES256', headers)
       end
 
       def private_key
