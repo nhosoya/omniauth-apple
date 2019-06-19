@@ -34,27 +34,29 @@ module OmniAuth
       private
 
       def id_info
+        log(:info, "access_token: #{access_token}")
         log(:info, "id_token: #{access_token.params['id_token']}")
         @id_info ||= ::JWT.decode(access_token.params['id_token'], nil, false)[0] # payload after decoding
         log(:info, "id_info: #{@id_info}")
+        log(:info, "credentials: #{credentials}")
         @id_info
       end
 
       def client_secret
         payload = {
-          iss: options[:team_id],
+          iss: options.team_id,
           aud: 'https://appleid.apple.com',
           sub: options.client_id,
           iat: Time.now.to_i,
           exp: Time.now.to_i + 60
         }
-        headers = { alg: 'ES256', kid: options[:key_id] }
+        headers = { alg: 'ES256', kid: options.key_id }
 
         ::JWT.encode(payload, private_key, 'ES256', headers)
       end
 
       def private_key
-        OpenSSL::PKey::EC.new(options[:pem])
+        OpenSSL::PKey::EC.new(options.pem)
       end
     end
   end
