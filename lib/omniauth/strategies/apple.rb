@@ -16,10 +16,9 @@ module OmniAuth
 
       info do
         {
-          email: user_info['email'],
-          name: user_info['user']&.values&.join(' '),
+          sub: id_info['sub'],
           extra: {
-            raw_info: id_info.merge(user_info)
+            raw_info: id_info
           }
         }
       end
@@ -35,11 +34,16 @@ module OmniAuth
       private
 
       def id_info
+        log(:info, "access_token: #{access_token}")
+        log(:info, "id_token: #{access_token.params['id_token']}")
         @id_info ||= ::JWT.decode(access_token.params['id_token'], nil, false)[0] # payload after decoding
+        log(:info, "id_info: #{@id_info}")
+        log(:info, "credentials: #{credentials}")
+        @id_info
       end
 
       def user_info
-        @user_info ||= JSON.parse(access_token.params['user'])
+        @user_info ||= JSON.parse(access_token.params['user']) if access_token.params['user'].present?
       end
 
       def client_secret
