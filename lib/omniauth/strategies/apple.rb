@@ -39,7 +39,7 @@ module OmniAuth
       end
 
       def user_info
-        @user_info ||= JSON.decode(access_token.params['id_token'])
+        @user_info ||= JSON.parse(access_token.params['id_token'])
       end
 
       def client_secret
