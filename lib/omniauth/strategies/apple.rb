@@ -34,15 +34,12 @@ module OmniAuth
       private
 
       def id_info
-        log(:info, "access_token: #{access_token}")
         log(:info, "id_token: #{access_token.params['id_token']}")
         @id_info ||= ::JWT.decode(access_token.params['id_token'], nil, false)[0] # payload after decoding
-        log(:info, "id_info: #{@id_info}")
-        log(:info, "credentials: #{credentials}")
-        @id_info
       end
 
       def user_info
+        log(:info, "user_info: #{access_token.params['user']}")
         @user_info ||= JSON.parse(access_token.params['user']) if access_token.params['user'].present?
       end
 
