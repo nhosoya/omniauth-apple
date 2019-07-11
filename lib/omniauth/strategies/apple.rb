@@ -17,11 +17,11 @@ module OmniAuth
       info do
         {
           sub: id_info['sub'],
-          email: user_info&.dig('email'),
-          first_name: user_info&.dig('name', 'firstName'),
-          last_name: user_info&.dig('name', 'lastName'),
+          email: user_info.dig('email'),
+          first_name: user_info.dig('name', 'firstName'),
+          last_name: user_info.dig('name', 'lastName'),
           extra: {
-            raw_info: id_info
+            raw_info: id_info.merge(user_info)
           }
         }
       end
@@ -34,16 +34,32 @@ module OmniAuth
         options[:redirect_uri] || (full_host + script_name + callback_path)
       end
 
+      def callback_phase
+        if request.params['error']
+          fail!(request.params['error'])
+        elsif request.params['state'].to_s.empty? || request.params['state'] != session.delete('omniauth.state')
+          fail!(:csrf_detected)
+        else
+          # success
+          super
+        end
+      rescue ::Timeout::Error, ::Errno::ETIMEDOUT => e
+        fail!(:timeout, e)
+      rescue ::SocketError => e
+        fail!(:failed_to_connect, e)
+      end
+
       private
 
       def id_info
-        log(:info, "id_token: #{access_token.params['id_token']}")
-        @id_info ||= ::JWT.decode(access_token.params['id_token'], nil, false)[0] # payload after decoding
+        log(:info, "id_token: #{request.params['id_token']}")
+        @id_info ||= ::JWT.decode(request.params['id_token'], nil, false)[0] # payload after decoding
       end
 
       def user_info
-        log(:info, "user_info: #{access_token.params['user']}")
-        @user_info ||= JSON.parse(access_token.params['user']) if access_token.params['user'].present?
+        log(:info, "user_info: #{request.params['user']}")
+        @user_info ||= JSON.parse(request.params['user']) if request.params['user'].present?
+        @user_info ||= {}
       end
 
       def client_secret
