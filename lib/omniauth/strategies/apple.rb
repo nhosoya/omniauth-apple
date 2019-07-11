@@ -17,6 +17,8 @@ module OmniAuth
       info do
         {
           sub: id_info['sub'],
+          email: user_info['email'],
+          name: user_info['name']&.values&.join(' '),
           extra: {
             raw_info: id_info
           }
