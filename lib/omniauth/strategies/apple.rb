@@ -57,7 +57,7 @@ module OmniAuth
       end
 
       def user_info
-        log(:info, "user_info: #{request.params['user']}")
+        log(:info, "request params: #{request.params}")
         @user_info ||= JSON.parse(request.params['user']) if request.params['user'].present?
         @user_info ||= {}
       end
