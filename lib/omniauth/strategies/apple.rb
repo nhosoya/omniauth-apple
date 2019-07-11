@@ -18,7 +18,8 @@ module OmniAuth
         {
           sub: id_info['sub'],
           email: user_info&.dig('email'),
-          name: user_info&.dig('name')&.values&.join(' '),
+          first_name: user_info&.dig('name', 'firstName'),
+          last_name: user_info&.dig('name', 'lastName'),
           extra: {
             raw_info: id_info
           }
