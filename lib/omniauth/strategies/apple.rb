@@ -37,10 +37,13 @@ module OmniAuth
       def callback_phase
         if request.params['error']
           fail!(request.params['error'])
-        elsif !options.provider_ignores_state && (request.params["state"].to_s.empty? || request.params["state"] != session.delete("omniauth.state"))
+        elsif !options.provider_ignores_state && (request.params['state'].to_s.empty? || request.params['state'] != session.delete('omniauth.state'))
           fail!(:csrf_detected)
-        else
-          # success
+        else # success
+          unless request.params['id_token'].present?
+            self.access_token = build_access_token
+            self.access_token = access_token.refresh! if access_token.expired?
+          end
           super
         end
       rescue ::Timeout::Error, ::Errno::ETIMEDOUT => e
@@ -52,13 +55,15 @@ module OmniAuth
       private
 
       def id_info
-        log(:info, "id_token: #{request.params['id_token']}")
-        @id_info ||= ::JWT.decode(request.params['id_token'], nil, false)[0] # payload after decoding
+        id_token = request.params['id_token'] || access_token.params['id_token']
+        log(:info, "id_token: #{id_token}")
+        @id_info ||= ::JWT.decode(id_token, nil, false)[0] # payload after decoding
       end
 
       def user_info
+        info = request.params['user'].presence || access_token.params['user'].presence
         log(:info, "request params: #{request.params}")
-        @user_info ||= JSON.parse(request.params['user']) if request.params['user'].present?
+        @user_info ||= JSON.parse(info) if info.present?
         @user_info ||= {}
       end
 
