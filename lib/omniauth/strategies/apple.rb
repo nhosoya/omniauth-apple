@@ -40,7 +40,7 @@ module OmniAuth
         elsif !options.provider_ignores_state && (request.params['state'].to_s.empty? || request.params['state'] != session.delete('omniauth.state'))
           fail!(:csrf_detected)
         else # success
-          unless request.params['id_token'].present?
+          unless request.params['id_token'].present? && request.params['user'].present?
             self.access_token = build_access_token
             self.access_token = access_token.refresh! if access_token.expired?
           end
@@ -61,10 +61,9 @@ module OmniAuth
       end
 
       def user_info
-        info = request.params['user'].presence || access_token.params['user'].presence
-        log(:info, "request params: #{request.params}")
+        info = request.params['user'].presence || access_token.params['user'].presence || '{}'
+        log(:info, "user_info: #{info}")
         @user_info ||= JSON.parse(info) if info.present?
-        @user_info ||= {}
       end
 
       def client_secret
