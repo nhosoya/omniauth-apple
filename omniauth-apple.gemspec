@@ -6,12 +6,12 @@ require "omniauth-apple/version"
 Gem::Specification.new do |spec|
   spec.name          = "omniauth-apple"
   spec.version       = Omniauth::Apple::VERSION
-  spec.authors       = ["Fabian Jäger"]
-  spec.email         = ["fabian@mailbutler.io"]
+  spec.authors       = ["nhosoya", "Fabian Jäger"]
+  spec.email         = ["hnhnnhnh@gmail.com", "fabian@mailbutler.io"]
 
   spec.summary       = %q{OmniAuth strategy for Sign In with Apple}
   spec.description   = %q{OmniAuth strategy for Sign In with Apple}
-  spec.homepage      = "https://github.com/mailbutler/omniauth-apple"
+  spec.homepage      = "https://github.com/nhosoya/omniauth-apple"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
