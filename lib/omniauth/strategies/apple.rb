@@ -64,7 +64,7 @@ module OmniAuth
       def user_info
         info = request.params['user'].presence || access_token.params['user'].presence || '{}'
         log(:info, "user_info: #{info}")
-        @user_info ||= JSON.parse(info) if info.present?
+        @user_info ||= info.present? ? JSON.parse(info) : {}
       end
 
       def client_secret
@@ -81,7 +81,7 @@ module OmniAuth
       end
 
       def private_key
-        OpenSSL::PKey::EC.new(options.pem)
+        ::OpenSSL::PKey::EC.new(options.pem)
       end
     end
   end
