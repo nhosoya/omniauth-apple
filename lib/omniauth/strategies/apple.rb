@@ -69,19 +69,19 @@ module OmniAuth
 
       def client_secret
         payload = {
-          iss: options.team_id,
+          iss: options[:team_id],
           aud: 'https://appleid.apple.com',
           sub: options.client_id,
           iat: Time.now.to_i,
-          exp: Time.now.to_i + 60
+          exp: Time.now.to_i + 300
         }
-        headers = { alg: 'ES256', kid: options.key_id }
+        headers = { kid: options[:key_id] }
 
         ::JWT.encode(payload, private_key, 'ES256', headers)
       end
 
       def private_key
-        ::OpenSSL::PKey::EC.new(options.pem)
+        ::OpenSSL::PKey::EC.new(options[:pem])
       end
     end
   end
