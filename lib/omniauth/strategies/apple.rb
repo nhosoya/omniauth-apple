@@ -37,12 +37,14 @@ module OmniAuth
       def callback_phase
         log(:info, "request_params: #{request.params}")
 
-        if request.params['code']
-          super # regular OAuth2 code flow --> request initiated via OmniAuth
-        else
+        if request.params['id_token'] && request.params['user']
           # Apple-specific callback --> request initiated via Apple JS
           env['omniauth.auth'] = auth_hash
           call_app!
+        elsif request.params['code']
+          super # regular OAuth2 code flow --> request initiated via OmniAuth
+        else
+          fail!(:invalid_callback_parameters)
         end
       end
 
