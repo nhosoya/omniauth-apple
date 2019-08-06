@@ -43,7 +43,8 @@ module OmniAuth
         else # success
           unless request.params['id_token'].present? && request.params['user'].present?
             self.access_token = build_access_token
-            self.access_token = access_token.refresh! if access_token.expired?
+            log(:info, "access_token: #{self.access_token}")
+            # self.access_token = access_token.refresh! if access_token.expired?
           end
           super
         end
