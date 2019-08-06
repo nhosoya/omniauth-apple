@@ -68,7 +68,7 @@ module OmniAuth
           aud: 'https://appleid.apple.com',
           sub: options.client_id,
           iat: Time.now.to_i,
-          exp: Time.now.to_i + 300
+          exp: Time.now.to_i + 60
         }
         headers = { kid: options.key_id }
 
