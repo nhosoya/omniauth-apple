@@ -36,22 +36,14 @@ module OmniAuth
 
       def callback_phase
         log(:info, "request_params: #{request.params}")
-        if request.params['error']
-          fail!(request.params['error'])
-        elsif !options.provider_ignores_state && (request.params['state'].to_s.empty? || request.params['state'] != session.delete('omniauth.state'))
-          fail!(:csrf_detected)
-        else # success
-          unless request.params['id_token'].present? && request.params['user'].present?
-            self.access_token = build_access_token
-            log(:info, "access_token: #{self.access_token}")
-            # self.access_token = access_token.refresh! if access_token.expired?
-          end
-          super
+
+        if request.params['code']
+          super # regular OAuth2 code flow --> request initiated via OmniAuth
+        else
+          # Apple-specific callback --> request initiated via Apple JS
+          env['omniauth.auth'] = auth_hash
+          call_app!
         end
-      rescue ::Timeout::Error, ::Errno::ETIMEDOUT => e
-        fail!(:timeout, e)
-      rescue ::SocketError => e
-        fail!(:failed_to_connect, e)
       end
 
       private
