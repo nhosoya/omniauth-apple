@@ -11,15 +11,17 @@ module OmniAuth
              site: 'https://appleid.apple.com',
              authorize_url: '/auth/authorize',
              token_url: '/auth/token'
+      option :authorize_params,
+             response_mode: 'form_post'
 
       uid { id_info['sub'] }
 
       info do
         {
           sub: id_info['sub'],
-          email: user_info.dig('email'),
-          first_name: user_info.dig('name', 'firstName'),
-          last_name: user_info.dig('name', 'lastName'),
+          email: email,
+          first_name: first_name,
+          last_name: last_name,
           extra: {
             raw_info: id_info.merge(user_info)
           }
@@ -37,7 +39,7 @@ module OmniAuth
       def callback_phase
         log(:info, "request_params: #{request.params}")
 
-        if request.params['id_token'] && request.params['user']
+        if request.params['id_token']
           # Apple-specific callback --> request initiated via Apple JS
           env['omniauth.auth'] = auth_hash
           call_app!
@@ -57,9 +59,22 @@ module OmniAuth
       end
 
       def user_info
-        info = request.params['user'].presence || access_token.params['user'].presence || '{}'
-        log(:info, "user_info: #{info}")
-        @user_info ||= info.present? ? JSON.parse(info) : {}
+        return {} unless request.params['user'].present?
+
+        log(:info, "user_info: #{request.params['user']}")
+        @user_info ||= JSON.parse(request.params['user'])
+      end
+
+      def email
+        user_info['email'] || id_info['email']
+      end
+
+      def first_name
+        user_info.dig('name', 'firstName')
+      end
+
+      def last_name
+        user_info.dig('name', 'lastName')
       end
 
       def client_secret
