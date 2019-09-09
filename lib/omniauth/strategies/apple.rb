@@ -21,10 +21,13 @@ module OmniAuth
           sub: id_info['sub'],
           email: email,
           first_name: first_name,
-          last_name: last_name,
-          extra: {
-            raw_info: id_info.merge(user_info)
-          }
+          last_name: last_name
+        }
+      end
+
+      extra do
+        {
+          raw_info: id_info.merge(user_info)
         }
       end
 
