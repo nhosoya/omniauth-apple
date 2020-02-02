@@ -13,7 +13,8 @@ module OmniAuth
              token_url: '/auth/token'
       option :authorize_params,
              response_mode: 'form_post'
-
+      option :authorized_client_ids, []
+      
       uid { id_info['sub'] }
 
       info do
@@ -32,7 +33,7 @@ module OmniAuth
       end
 
       def client
-        ::OAuth2::Client.new(options.client_id, client_secret, deep_symbolize(options.client_options))
+        ::OAuth2::Client.new(client_id, client_secret, deep_symbolize(options.client_options))
       end
 
       def callback_url
@@ -45,6 +46,11 @@ module OmniAuth
         id_token = request.params['id_token'] || access_token.params['id_token']
         log(:info, "id_token: #{id_token}")
         @id_info ||= ::JWT.decode(id_token, nil, false)[0] # payload after decoding
+      end
+
+      def client_id
+        return id_info['aud'] if options.authorized_client_ids.include? id_info['aud']
+        options.client_id
       end
 
       def user_info
@@ -70,7 +76,7 @@ module OmniAuth
         payload = {
           iss: options.team_id,
           aud: 'https://appleid.apple.com',
-          sub: options.client_id,
+          sub: client_id,
           iat: Time.now.to_i,
           exp: Time.now.to_i + 60
         }
