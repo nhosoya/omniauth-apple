@@ -43,13 +43,18 @@ module OmniAuth
       private
 
       def id_info
-        id_token = request.params['id_token'] || access_token.params['id_token']
-        log(:info, "id_token: #{id_token}")
-        @id_info ||= ::JWT.decode(id_token, nil, false)[0] # payload after decoding
+        if request.params&.key?('id_token') || access_token&.params&.key?('id_token')
+          id_token = request.params['id_token'] || access_token.params['id_token']
+          log(:info, "id_token: #{id_token}")
+          @id_info ||= ::JWT.decode(id_token, nil, false)[0] # payload after decoding
+        end
       end
 
       def client_id
-        return id_info['aud'] if options.authorized_client_ids.include? id_info['aud']
+        unless id_info.nil?
+          return id_info['aud'] if options.authorized_client_ids.include? id_info['aud']
+        end
+
         options.client_id
       end
 
