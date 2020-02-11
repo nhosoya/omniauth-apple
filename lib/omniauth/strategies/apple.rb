@@ -36,7 +36,15 @@ module OmniAuth
       end
 
       def callback_url
-        options[:redirect_uri] || (full_host + script_name + callback_path)
+        stripped_params = request.params&.slice('return_to')
+        query_string = if stripped_params
+                         uri = Addressable::URI.new
+                         uri.query_values = stripped_params
+                         "?#{uri.query}"
+                       else
+                         ''
+                       end
+        options[:redirect_uri] || (full_host + script_name + callback_path + query_string)
       end
 
       private
