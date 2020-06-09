@@ -7,6 +7,7 @@
 ### Changed
 
 - [#27](https://github.com/nhosoya/omniauth-apple/pull/27) Update development dependency 
+- [#28](https://github.com/nhosoya/omniauth-apple/pull/28) Update README.md
 
 ## [0.0.3] - 2020-05-15
 
