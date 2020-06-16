@@ -4,6 +4,10 @@
 
 - [#26](https://github.com/nhosoya/omniauth-apple/pull/26) Support ID Token verification
 
+### Fixed
+
+- [#31](https://github.com/nhosoya/omniauth-apple/pull/31) Stop relying on ActiveSupport
+
 ### Changed
 
 - [#27](https://github.com/nhosoya/omniauth-apple/pull/27) Update development dependency 
