@@ -76,7 +76,7 @@ module OmniAuth
       def fetch_jwks
         uri = URI.parse('https://appleid.apple.com/auth/keys')
         response = Net::HTTP.get_response(uri)
-        { keys: JSON.parse(response.body)['keys'].map(&:with_indifferent_access) }
+        { keys: JSON.parse(response.body)['keys'].map { |key| deep_symbolize(key) } }
       end
 
       def verify_nonce!(payload)
