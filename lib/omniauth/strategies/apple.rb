@@ -82,7 +82,7 @@ module OmniAuth
       def verify_nonce!(payload)
         return unless payload[:nonce_supported]
 
-        return if payload[:nonce].present? && payload[:nonce] != stored_nonce
+        return if payload[:nonce] && payload[:nonce] != stored_nonce
 
         fail!(:nonce_mismatch, CallbackError.new(:nonce_mismatch, 'nonce mismatch'))
       end
@@ -96,10 +96,10 @@ module OmniAuth
       end
 
       def user_info
-        return {} unless request.params['user'].present?
+        user = request.params['user']
+        return {} if user.nil? || user.empty?
 
-        log(:info, "user_info: #{request.params['user']}")
-        @user_info ||= JSON.parse(request.params['user'])
+        @user_info ||= JSON.parse(user)
       end
 
       def email
