@@ -19,18 +19,18 @@ module OmniAuth
       uid { id_info['sub'] }
 
       info do
-        {
+        prune!(
           sub: id_info['sub'],
           email: email,
           first_name: first_name,
-          last_name: last_name
-        }
+          last_name: last_name,
+          name: (first_name || last_name) ? [first_name, last_name].join(' ') : email,
+        )
       end
 
       extra do
-        {
-          raw_info: id_info.merge(user_info)
-        }
+        id_token = request.params['id_token'] || access_token&.params&.dig('id_token')
+        prune!(raw_info: {id_info: id_info, user_info: user_info, id_token: id_token})
       end
 
       def client
@@ -112,6 +112,13 @@ module OmniAuth
 
       def last_name
         user_info.dig('name', 'lastName')
+      end
+
+      def prune!(hash)
+        hash.delete_if do |_, v|
+          prune!(v) if v.is_a?(Hash)
+          v.nil? || (v.respond_to?(:empty?) && v.empty?)
+        end
       end
 
       def client_secret
