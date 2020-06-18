@@ -6,7 +6,7 @@
 
 ### Fixed
 
-- [#31](https://github.com/nhosoya/omniauth-apple/pull/31) Stop relying on ActiveSupport
+- [#31](https://github.com/nhosoya/omniauth-apple/pull/31), [#35](https://github.com/nhosoya/omniauth-apple/pull/35) Avoid using the Rails extensions
 
 ### Changed
 
