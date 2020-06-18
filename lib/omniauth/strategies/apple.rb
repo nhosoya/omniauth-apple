@@ -76,13 +76,13 @@ module OmniAuth
       def fetch_jwks
         uri = URI.parse('https://appleid.apple.com/auth/keys')
         response = Net::HTTP.get_response(uri)
-        { keys: JSON.parse(response.body)['keys'].map { |key| deep_symbolize(key) } }
+        JSON.parse(response.body, symbolize_names: true)
       end
 
       def verify_nonce!(payload)
-        return unless payload[:nonce_supported]
+        return unless payload['nonce_supported']
 
-        return if payload[:nonce].present? && payload[:nonce] != stored_nonce
+        return if payload['nonce'] && payload['nonce'] == stored_nonce
 
         fail!(:nonce_mismatch, CallbackError.new(:nonce_mismatch, 'nonce mismatch'))
       end
