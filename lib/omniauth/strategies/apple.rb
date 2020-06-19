@@ -13,7 +13,8 @@ module OmniAuth
              authorize_url: '/auth/authorize',
              token_url: '/auth/token'
       option :authorize_params,
-             response_mode: 'form_post'
+             response_mode: 'form_post',
+             scope: 'email name'
       option :authorized_client_ids, []
 
       uid { id_info['sub'] }
@@ -97,7 +98,7 @@ module OmniAuth
 
       def user_info
         user = request.params['user']
-        return {} if user.nil? || user.empty?
+        return {} if user.nil?
 
         @user_info ||= JSON.parse(user)
       end
