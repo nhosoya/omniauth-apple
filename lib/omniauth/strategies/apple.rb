@@ -97,10 +97,10 @@ module OmniAuth
       end
 
       def user_info
-        return {} unless request.params['user'].present?
+        user = request.params['user']
+        return {} if user.nil?
 
-        log(:info, "user_info: #{request.params['user']}")
-        @user_info ||= JSON.parse(request.params['user'])
+        @user_info ||= JSON.parse(user)
       end
 
       def email
