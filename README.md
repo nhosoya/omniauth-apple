@@ -1,3 +1,5 @@
+![build](https://github.com/nhosoya/omniauth-apple/workflows/RSpec/badge.svg?branch=master&event=push)
+
 # OmniAuth::Apple
 
 OmniAuth strategy for [Sign In with Apple](https://developer.apple.com/sign-in-with-apple/).
