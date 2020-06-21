@@ -1,3 +1,5 @@
+![build](https://github.com/nhosoya/omniauth-apple/workflows/RSpec/badge.svg?branch=master&event=push)
+
 # OmniAuth::Apple
 
 OmniAuth strategy for [Sign In with Apple](https://developer.apple.com/sign-in-with-apple/).
@@ -7,7 +9,7 @@ OmniAuth strategy for [Sign In with Apple](https://developer.apple.com/sign-in-w
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'omniauth-apple', github: 'nhosoya/omniauth-apple', branch: 'master'
+gem 'omniauth-apple'
 ```
 
 And then execute:

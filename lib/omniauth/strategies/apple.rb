@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'omniauth-oauth2'
+require 'net/https'
 
 module OmniAuth
   module Strategies
@@ -12,27 +13,33 @@ module OmniAuth
              authorize_url: '/auth/authorize',
              token_url: '/auth/token'
       option :authorize_params,
-             response_mode: 'form_post'
+             response_mode: 'form_post',
+             scope: 'email name'
+      option :authorized_client_ids, []
 
       uid { id_info['sub'] }
 
       info do
-        {
+        prune!(
           sub: id_info['sub'],
           email: email,
           first_name: first_name,
-          last_name: last_name
-        }
+          last_name: last_name,
+          name: (first_name || last_name) ? [first_name, last_name].join(' ') : email,
+        )
       end
 
       extra do
-        {
-          raw_info: id_info.merge(user_info)
-        }
+        id_token = request.params['id_token'] || access_token&.params&.dig('id_token')
+        prune!(raw_info: {id_info: id_info, user_info: user_info, id_token: id_token})
       end
 
       def client
-        ::OAuth2::Client.new(options.client_id, client_secret, deep_symbolize(options.client_options))
+        ::OAuth2::Client.new(client_id, client_secret, deep_symbolize(options.client_options))
+      end
+
+      def authorize_params
+        super.merge(nonce: new_nonce)
       end
 
       def callback_url
@@ -45,17 +52,59 @@ module OmniAuth
 
       private
 
+      def new_nonce
+        session['omniauth.nonce'] = SecureRandom.urlsafe_base64(16)
+      end
+
+      def stored_nonce
+        session.delete('omniauth.nonce')
+      end
+
       def id_info
-        id_token = request.params['id_token'] || access_token.params['id_token']
-        log(:info, "id_token: #{id_token}")
-        @id_info ||= ::JWT.decode(id_token, nil, false)[0] # payload after decoding
+        @id_info ||= if request.params&.key?('id_token') || access_token&.params&.key?('id_token')
+                       id_token = request.params['id_token'] || access_token.params['id_token']
+                       jwt_options = {
+                         verify_iss: true,
+                         iss: 'https://appleid.apple.com',
+                         verify_iat: true,
+                         verify_aud: true,
+                         aud: [options.client_id].concat(options.authorized_client_ids),
+                         algorithms: ['RS256'],
+                         jwks: fetch_jwks
+                       }
+                       payload, _header = ::JWT.decode(id_token, nil, true, jwt_options)
+                       verify_nonce!(payload)
+                       payload
+                     end
+      end
+
+      def fetch_jwks
+        uri = URI.parse('https://appleid.apple.com/auth/keys')
+        response = Net::HTTP.get_response(uri)
+        JSON.parse(response.body, symbolize_names: true)
+      end
+
+      def verify_nonce!(payload)
+        return unless payload['nonce_supported']
+
+        return if payload['nonce'] && payload['nonce'] == stored_nonce
+
+        fail!(:nonce_mismatch, CallbackError.new(:nonce_mismatch, 'nonce mismatch'))
+      end
+
+      def client_id
+        @client_id ||= if id_info.nil?
+                         options.client_id
+                       else
+                         id_info['aud'] if options.authorized_client_ids.include? id_info['aud']
+                       end
       end
 
       def user_info
-        return {} unless request.params['user'].present?
+        user = request.params['user']
+        return {} if user.nil?
 
-        log(:info, "user_info: #{request.params['user']}")
-        @user_info ||= JSON.parse(request.params['user'])
+        @user_info ||= JSON.parse(user)
       end
 
       def email
@@ -70,11 +119,18 @@ module OmniAuth
         user_info.dig('name', 'lastName')
       end
 
+      def prune!(hash)
+        hash.delete_if do |_, v|
+          prune!(v) if v.is_a?(Hash)
+          v.nil? || (v.respond_to?(:empty?) && v.empty?)
+        end
+      end
+
       def client_secret
         payload = {
           iss: options.team_id,
           aud: 'https://appleid.apple.com',
-          sub: options.client_id,
+          sub: client_id,
           iat: Time.now.to_i,
           exp: Time.now.to_i + 60
         }
