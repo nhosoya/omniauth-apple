@@ -5,7 +5,7 @@ require "omniauth/apple/version"
 
 Gem::Specification.new do |spec|
   spec.name          = "omniauth-apple"
-  spec.version       = Omniauth::Apple::VERSION
+  spec.version       = OmniAuth::Apple::VERSION
   spec.authors       = ["nhosoya", "Fabian Jäger"]
   spec.email         = ["hnhnnhnh@gmail.com", "fabian@mailbutler.io"]
 
