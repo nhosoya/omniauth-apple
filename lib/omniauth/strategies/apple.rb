@@ -75,8 +75,10 @@ module OmniAuth
       end
 
       def fetch_jwks
-        uri = URI.parse('https://appleid.apple.com/auth/keys')
-        response = Net::HTTP.get_response(uri)
+        http = Net::HTTP.new('appleid.apple.com', 443)
+        http.use_ssl = true
+        request = Net::HTTP::Get.new('/auth/keys', 'User-Agent' => 'ruby/omniauth-apple')
+        response = http.request(request)
         JSON.parse(response.body, symbolize_names: true)
       end
 
