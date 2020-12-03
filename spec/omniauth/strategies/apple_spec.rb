@@ -252,6 +252,21 @@ describe OmniAuth::Strategies::Apple do
       end
     end
 
+    context 'with a spoofed email in the user payload' do
+      before do
+        request.params['user'] = {
+          name: {
+            firstName: 'first',
+            lastName: 'last'
+          },
+          email: "spoofed@example.com"
+        }.to_json
+      end
+
+      it 'should return the true email' do
+        expect(subject.info[:email]).to eq('something@privatrerelay.appleid.com')
+      end
+    end
   end
 
   describe '#extra' do

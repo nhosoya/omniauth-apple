@@ -104,7 +104,7 @@ module OmniAuth
       end
 
       def email
-        user_info['email'] || id_info['email']
+        id_info['email']
       end
 
       def first_name
