@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [1.0.1] - 2020-12-03
+
+### Security
+
+- Use only verified email address to prevent fake email address
+
 ## [1.0.0] - 2020-06-26
 
 ### Added
@@ -33,3 +39,4 @@
 
 [Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.0...master
 [1.0.0]: https://github.com/nhosoya/omniauth-apple/compare/v0.0.3...v1.0.0
+[1.0.1]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.0...v1.0.1
