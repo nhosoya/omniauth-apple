@@ -314,4 +314,18 @@ describe OmniAuth::Strategies::Apple do
 
  end
 
+  it 'should set the state parameter' do
+    options.merge!({ state: 'some_state' })
+    expect(subject.authorize_params['state']).to eq('some_state')
+    expect(subject.authorize_params[:state]).to eq('some_state')
+    expect(subject.session['omniauth.state']).to eq('some_state')
+  end
+
+  it 'should set the omniauth.state dynamically' do
+    allow(subject).to receive(:request) { double('Request', params: { 'state' => 'some_state' }, env: {}) }
+    expect(subject.authorize_params['state']).to eq('some_state')
+    expect(subject.authorize_params[:state]).to eq('some_state')
+    expect(subject.session['omniauth.state']).to eq('some_state')
+  end
+
 end

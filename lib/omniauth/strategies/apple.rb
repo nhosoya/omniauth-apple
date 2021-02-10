@@ -39,7 +39,14 @@ module OmniAuth
       end
 
       def authorize_params
-        super.merge(nonce: new_nonce)
+        super.tap do |params|
+          options[:authorize_options].each do |k|
+            params[k] = request.params[k.to_s] unless [nil, ''].include?(request.params[k.to_s])
+          end
+
+          params[:nonce] = new_nonce
+          session['omniauth.state'] = params[:state] if params[:state]
+        end
       end
 
       def callback_url
