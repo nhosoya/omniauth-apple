@@ -75,8 +75,13 @@ module OmniAuth
       end
 
       def fetch_jwks
+        #Apple returns 403 from some regions if the useragent is set to the default of 'Ruby'
         uri = URI.parse('https://appleid.apple.com/auth/keys')
-        response = Net::HTTP.get_response(uri)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        request = Net::HTTP::Get.new(uri.request_uri)
+        request['user-agent'] = ""
+        response = http.request(request)
         JSON.parse(response.body, symbolize_names: true)
       end
 
