@@ -191,11 +191,13 @@ describe OmniAuth::Strategies::Apple do
 
   describe '#callback_path' do
     it 'has the correct default callback path' do
+      subject.authorize_params # initializes env, session (for test_mode) and populates 'nonce', 'state'
       expect(subject.callback_path).to eq('/auth/apple/callback')
     end
 
     it 'should set the callback_path parameter if present' do
       options.merge!(callback_path: '/auth/foo/callback')
+      subject.authorize_params # initializes env, session (for test_mode) and populates 'nonce', 'state'
       expect(subject.callback_path).to eq('/auth/foo/callback')
     end
   end
