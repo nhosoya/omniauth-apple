@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [1.0.2] - 2021-05-19
+
+### Fixed
+
+- [#59](https://github.com/nhosoya/omniauth-apple/pull/59) Provide User-Agent when fetching JWKs
+
+
 ## [1.0.1] - 2020-12-03
 
 ### Security
@@ -37,6 +44,7 @@
 
 ## [0.0.1] - 2019-06-07
 
-[Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.0...master
+[Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.2...master
 [1.0.0]: https://github.com/nhosoya/omniauth-apple/compare/v0.0.3...v1.0.0
 [1.0.1]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.0...v1.0.1
+[1.0.2]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.1...v1.0.2
