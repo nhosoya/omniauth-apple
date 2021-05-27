@@ -19,6 +19,8 @@ module OmniAuth
 
       uid { id_info['sub'] }
 
+      # Documentation on parameters
+      # https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_rest_api/authenticating_users_with_sign_in_with_apple
       info do
         prune!(
           sub: id_info['sub'],
@@ -26,6 +28,8 @@ module OmniAuth
           first_name: first_name,
           last_name: last_name,
           name: (first_name || last_name) ? [first_name, last_name].join(' ') : email,
+          email_verified: email_verified,
+          is_private_email: is_private_email
         )
       end
 
@@ -36,6 +40,16 @@ module OmniAuth
 
       def client
         ::OAuth2::Client.new(client_id, client_secret, deep_symbolize(options.client_options))
+      end
+
+      def email_verified
+        value = id_info['email_verified']
+        value == true || value == "true"
+      end
+
+      def is_private_email
+        value = id_info['is_private_email']
+        value == true || value == "true"
       end
 
       def authorize_params
