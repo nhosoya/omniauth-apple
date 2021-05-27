@@ -17,11 +17,11 @@ module OmniAuth
              scope: 'email name'
       option :authorized_client_ids, []
 
-      uid { id_info['sub'] }
+      uid { id_info && id_info['sub'] }
 
       info do
         prune!(
-          sub: id_info['sub'],
+          sub: id_info && id_info['sub'],
           email: email,
           first_name: first_name,
           last_name: last_name,
@@ -106,7 +106,7 @@ module OmniAuth
       end
 
       def email
-        id_info['email']
+        id_info && id_info['email']
       end
 
       def first_name
