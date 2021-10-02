@@ -69,6 +69,7 @@ module OmniAuth
                          jwks: fetch_jwks
                        }
                        payload, _header = ::JWT.decode(id_token, nil, true, jwt_options)
+                       verify_nonce!(payload)
                        payload
                      end
       end
