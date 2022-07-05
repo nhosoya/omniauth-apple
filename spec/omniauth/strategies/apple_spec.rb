@@ -189,6 +189,22 @@ describe OmniAuth::Strategies::Apple do
     end
   end
 
+  describe '#callback_url' do
+    let(:base_url) { 'https://example.com' }
+
+    it 'has the correct default callback path' do
+      allow(subject).to receive(:full_host) { base_url }
+      allow(subject).to receive(:script_name) { '' }
+      expect(subject.send(:callback_url)).to eq(base_url + '/auth/apple/callback')
+    end
+
+    it 'should set the callback path with script_name if present' do
+      allow(subject).to receive(:full_host) { base_url }
+      allow(subject).to receive(:script_name) { '/v1' }
+      expect(subject.send(:callback_url)).to eq(base_url + '/v1/auth/apple/callback')
+    end
+  end
+
   describe '#callback_path' do
     it 'has the correct default callback path' do
       expect(subject.callback_path).to eq('/auth/apple/callback')
