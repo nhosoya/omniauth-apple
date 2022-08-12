@@ -2,6 +2,7 @@
 
 require 'omniauth-oauth2'
 require 'net/https'
+require 'json/jwt'
 
 module OmniAuth
   module Strategies
@@ -89,11 +90,11 @@ module OmniAuth
       end
 
       def fetch_jwks
-        http = Net::HTTP.new('appleid.apple.com', 443)
-        http.use_ssl = true
-        request = Net::HTTP::Get.new('/auth/keys', 'User-Agent' => 'ruby/omniauth-apple')
-        response = http.request(request)
-        JSON.parse(response.body, symbolize_names: true)
+        JSON::JWK::Set::Fetcher.fetch(
+          'https://appleid.apple.com/auth/keys',
+          kid: :any,
+          auto_detect: false
+        ).as_json.with_indifferent_access
       end
 
       def verify_nonce!(payload)
