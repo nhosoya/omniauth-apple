@@ -81,7 +81,7 @@ module OmniAuth
                          verify_aud: true,
                          aud: [options.client_id].concat(options.authorized_client_ids),
                          algorithms: ['RS256'],
-                         jwks: fetch_jwks
+                         jwks: jwks_fetcher
                        }
                        payload, _header = ::JWT.decode(id_token, nil, true, jwt_options)
                        verify_nonce!(payload)
@@ -89,12 +89,14 @@ module OmniAuth
                      end
       end
 
-      def fetch_jwks
-        JSON::JWK::Set::Fetcher.fetch(
-          'https://appleid.apple.com/auth/keys',
-          kid: :any,
-          auto_detect: false
-        ).as_json.with_indifferent_access
+      def jwks_fetcher
+        lambda do |options|
+          JSON::JWK::Set::Fetcher.fetch(
+            'https://appleid.apple.com/auth/keys',
+            kid: options[:kid],
+            auto_detect: false
+          ).as_json.with_indifferent_access
+        end
       end
 
       def verify_nonce!(payload)
