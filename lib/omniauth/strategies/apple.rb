@@ -77,7 +77,7 @@ module OmniAuth
                        jwt_options = {
                          verify_iss: true,
                          iss: 'https://appleid.apple.com',
-                         verify_iat: true,
+                         verify_iat: false,
                          verify_aud: true,
                          aud: [options.client_id].concat(options.authorized_client_ids),
                          algorithms: ['RS256'],
