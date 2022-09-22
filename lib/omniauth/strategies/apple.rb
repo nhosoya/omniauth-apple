@@ -38,6 +38,20 @@ module OmniAuth
         ::OAuth2::Client.new(client_id, client_secret, deep_symbolize(options.client_options))
       end
 
+      def callback_phase
+        if request.request_method.downcase.to_sym == :post
+          url = "#{callback_url}"
+          if (code = request.params['code']) && (state = request.params['state'])
+            url += "?code=#{CGI::escape(code)}"
+            url += "&state=#{CGI::escape(state)}"
+            url += "&user=#{CGI::escape(request.params['user'])}" if request.params['user']
+          end
+          session.options[:drop] = true # Do not set a session cookie on this response
+          return redirect url
+        end
+        super
+      end
+
       def authorize_params
         super.merge(nonce: new_nonce)
       end
