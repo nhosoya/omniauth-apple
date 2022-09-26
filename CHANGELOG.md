@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+## [1.1.0] - 2022-09-26
+
+### Added
+
+- [#67](https://github.com/nhosoya/omniauth-apple/pull/67) Add email_verified and is_private_email
+
+### Fixed
+
+- [#74](https://github.com/nhosoya/omniauth-apple/pull/74) rspec failure - callback_path null pointer
+- [#81](https://github.com/nhosoya/omniauth-apple/pull/81) Allow for omniauth 2.0 series
+- [#88](https://github.com/nhosoya/omniauth-apple/pull/88) update github actions config
+
 ## [1.0.2] - 2021-05-19
 
 ### Fixed
@@ -33,7 +45,7 @@
 
 ### Changed
 
-- [#27](https://github.com/nhosoya/omniauth-apple/pull/27) Update development dependency 
+- [#27](https://github.com/nhosoya/omniauth-apple/pull/27) Update development dependency
 - [#28](https://github.com/nhosoya/omniauth-apple/pull/28) Update README.md
 - [#38](https://github.com/nhosoya/omniauth-apple/pull/38) Refine AuthHash
 - [#39](https://github.com/nhosoya/omniauth-apple/pull/39) Set the default scope to 'email name'
