@@ -62,7 +62,7 @@
 
 ## [0.0.1] - 2019-06-07
 
-[Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.1.0...master
+[Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.2.0...master
 [1.2.0]: https://github.com/nhosoya/omniauth-apple/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.1...v1.0.2
