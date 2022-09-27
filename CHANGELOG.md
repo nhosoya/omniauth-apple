@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [1.1.0] - 2022-09-27
+
+### Fixed
+
+- [#91](https://github.com/nhosoya/omniauth-apple/pull/91) explicitly specify auth_scheme for oauth2 v2+ support
+
 ## [1.1.0] - 2022-09-26
 
 ### Added
@@ -57,6 +63,7 @@
 ## [0.0.1] - 2019-06-07
 
 [Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.1.0...master
+[1.2.0]: https://github.com/nhosoya/omniauth-apple/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.0...v1.0.1
