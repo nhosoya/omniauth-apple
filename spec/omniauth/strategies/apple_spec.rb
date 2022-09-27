@@ -82,6 +82,10 @@ describe OmniAuth::Strategies::Apple do
       expect(subject.client.options[:token_url]).to eq('/auth/token')
     end
 
+    it 'has correct auth_scheme' do
+      expect(subject.client.options[:auth_scheme]).to eq(:request_body)
+    end
+
     describe 'overrides' do
       context 'as strings' do
         it 'should allow overriding the site' do
