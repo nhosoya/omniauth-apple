@@ -61,7 +61,12 @@ describe OmniAuth::Strategies::Apple do
 
   before do
     OmniAuth.config.test_mode = true
-    stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(body: auth_keys.to_json)
+    stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+      body: auth_keys.to_json,
+      headers: {
+       'Content-Type': 'application/json'
+      }
+    )
   end
 
   after do

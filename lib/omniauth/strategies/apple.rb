@@ -90,11 +90,18 @@ module OmniAuth
       end
 
       def fetch_jwks
-        http = Net::HTTP.new('appleid.apple.com', 443)
-        http.use_ssl = true
-        request = Net::HTTP::Get.new('/auth/keys', 'User-Agent' => 'ruby/omniauth-apple')
-        response = http.request(request)
-        JSON.parse(response.body, symbolize_names: true)
+        conn = Faraday.new(headers: {user_agent: 'ruby/omniauth-apple'}) do |c|
+          c.response :json, parser_options: { symbolize_names: true }
+          c.adapter Faraday.default_adapter
+        end
+        res = conn.get 'https://appleid.apple.com/auth/keys'
+        if res.success?
+          res.body
+        else
+          fail!(:jwks_fetching_failed)
+        end
+      rescue Faraday::Error => e
+        fail!(:jwks_fetching_failed, e)
       end
 
       def verify_nonce!(payload)
