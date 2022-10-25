@@ -1,6 +1,13 @@
 ## [Unreleased]
 
-## [1.1.0] - 2022-09-27
+## [1.2.1] - 2022-10-25
+
+### Fixed
+
+- [#94](https://github.com/nhosoya/omniauth-apple/pull/94) rack-protection.rb is back in rack-protection v3.0.1
+- [#96](https://github.com/nhosoya/omniauth-apple/pull/96) handle JWKS fetch failures
+
+## [1.2.0] - 2022-09-27
 
 ### Fixed
 
