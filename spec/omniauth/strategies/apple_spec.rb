@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'json'
-require 'omniauth-apple'
 
 describe OmniAuth::Strategies::Apple do
   let(:request) { double('Request', params: {}, cookies: {}, env: {}) }
@@ -61,7 +59,12 @@ describe OmniAuth::Strategies::Apple do
 
   before do
     OmniAuth.config.test_mode = true
-    stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(body: auth_keys.to_json)
+    stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+      body: auth_keys.to_json,
+      headers: {
+       'Content-Type': 'application/json'
+      }
+    )
   end
 
   after do
@@ -333,7 +336,49 @@ describe OmniAuth::Strategies::Apple do
         end
       end
     end
+  end
 
- end
+  describe 'network errors' do
+    before do
+      subject.authorize_params # initializes session / populates 'nonce', 'state', etc
+      id_token_payload['nonce'] = subject.session['omniauth.nonce']
+      request.params.merge!('id_token' => id_token)
+    end
 
+    context 'when JWKS fetching failed' do
+      before do
+        stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+          status: 502,
+          body: "<html><head><title>502 Bad Gateway..."
+        )
+      end
+
+      it do
+        expect(subject).to receive(:fail!).with(
+          :jwks_fetching_failed,
+          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+        )
+        subject.info
+      end
+    end
+
+    context 'when JWKS format is invalid' do
+      before do
+        stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+          body: 'invalid',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        )
+      end
+
+      it do
+        expect(subject).to receive(:fail!).with(
+          :jwks_fetching_failed,
+          instance_of(Faraday::ParsingError)
+        )
+        subject.info
+      end
+    end
+  end
 end

@@ -74,27 +74,38 @@ module OmniAuth
       def id_info
         @id_info ||= if request.params&.key?('id_token') || access_token&.params&.key?('id_token')
                        id_token = request.params['id_token'] || access_token.params['id_token']
-                       jwt_options = {
-                         verify_iss: true,
-                         iss: 'https://appleid.apple.com',
-                         verify_iat: true,
-                         verify_aud: true,
-                         aud: [options.client_id].concat(options.authorized_client_ids),
-                         algorithms: ['RS256'],
-                         jwks: fetch_jwks
-                       }
-                       payload, _header = ::JWT.decode(id_token, nil, true, jwt_options)
-                       verify_nonce!(payload)
-                       payload
+                       if (verification_key = fetch_jwks)
+                         jwt_options = {
+                           verify_iss: true,
+                           iss: 'https://appleid.apple.com',
+                           verify_iat: true,
+                           verify_aud: true,
+                           aud: [options.client_id].concat(options.authorized_client_ids),
+                           algorithms: ['RS256'],
+                           jwks: verification_key
+                         }
+                         payload, _header = ::JWT.decode(id_token, nil, true, jwt_options)
+                         verify_nonce!(payload)
+                         payload
+                       else
+                         {}
+                       end
                      end
       end
 
       def fetch_jwks
-        http = Net::HTTP.new('appleid.apple.com', 443)
-        http.use_ssl = true
-        request = Net::HTTP::Get.new('/auth/keys', 'User-Agent' => 'ruby/omniauth-apple')
-        response = http.request(request)
-        JSON.parse(response.body, symbolize_names: true)
+        conn = Faraday.new(headers: {user_agent: 'ruby/omniauth-apple'}) do |c|
+          c.response :json, parser_options: { symbolize_names: true }
+          c.adapter Faraday.default_adapter
+        end
+        res = conn.get 'https://appleid.apple.com/auth/keys'
+        if res.success?
+          res.body
+        else
+          fail!(:jwks_fetching_failed, CallbackError.new(:jwks_fetching_failed, 'HTTP Error when fetching JWKs'))
+        end
+      rescue Faraday::Error => e
+        fail!(:jwks_fetching_failed, e)
       end
 
       def verify_nonce!(payload)
