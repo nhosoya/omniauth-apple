@@ -108,10 +108,10 @@ module OmniAuth
         if res.success?
           res.body
         else
-          fail!(:jwks_fetching_failed, JWTFetchingFailed.new('HTTP Error when fetching JWKs'))
+          raise JWTFetchingFailed.new('HTTP Error when fetching JWKs')
         end
-      rescue Faraday::Error => e
-        fail!(:jwks_fetching_failed, e)
+      rescue JWTFetchingFailed, Faraday::Error => e
+        fail!(:jwks_fetching_failed, e) and nil
       end
 
       def verify_nonce!(payload)
