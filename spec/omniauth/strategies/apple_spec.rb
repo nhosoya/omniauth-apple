@@ -380,5 +380,24 @@ describe OmniAuth::Strategies::Apple do
         subject.info
       end
     end
+
+    context 'when JWKS format is missing :keys' do
+      before do
+        stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+          body: 'true',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        )
+      end
+
+      it do
+        expect(subject).to receive(:fail!).with(
+          :jwks_fetching_failed,
+          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+        )
+        subject.info
+      end
+    end
   end
 end

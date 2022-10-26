@@ -100,7 +100,12 @@ module OmniAuth
         end
         res = conn.get 'https://appleid.apple.com/auth/keys'
         if res.success?
-          res.body
+          jwks = res.body
+          if jwks.is_a?(Hash)
+            jwks
+          else
+            fail!(:jwks_fetching_failed, CallbackError.new(:jwks_fetching_failed, "Invalid format of JWKS returned: #{jwks}"))
+          end
         else
           fail!(:jwks_fetching_failed, CallbackError.new(:jwks_fetching_failed, 'HTTP Error when fetching JWKs'))
         end
