@@ -6,6 +6,12 @@ require 'net/https'
 module OmniAuth
   module Strategies
     class Apple < OmniAuth::Strategies::OAuth2
+      class JWTFetchingFailed < CallbackError
+        def initialize(error_reason = nil, error_uri = nil)
+          super :jwks_fetching_failed, error_reason, error_uri
+        end
+      end
+
       option :name, 'apple'
 
       option :client_options,
@@ -104,10 +110,10 @@ module OmniAuth
           if jwks.is_a?(Hash)
             jwks
           else
-            fail!(:jwks_fetching_failed, CallbackError.new(:jwks_fetching_failed, "Invalid format of JWKS returned: #{jwks}"))
+            fail!(:jwks_fetching_failed, JWTFetchingFailed.new("Invalid format of JWKS returned: #{jwks}"))
           end
         else
-          fail!(:jwks_fetching_failed, CallbackError.new(:jwks_fetching_failed, 'HTTP Error when fetching JWKs'))
+          fail!(:jwks_fetching_failed, JWTFetchingFailed.new('HTTP Error when fetching JWKs'))
         end
       rescue Faraday::Error => e
         fail!(:jwks_fetching_failed, e)

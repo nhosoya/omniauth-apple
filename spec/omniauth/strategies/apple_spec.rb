@@ -356,7 +356,7 @@ describe OmniAuth::Strategies::Apple do
       it do
         expect(subject).to receive(:fail!).with(
           :jwks_fetching_failed,
-          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+          instance_of(OmniAuth::Strategies::Apple::JWTFetchingFailed)
         )
         subject.info
       end
@@ -394,7 +394,7 @@ describe OmniAuth::Strategies::Apple do
       it do
         expect(subject).to receive(:fail!).with(
           :jwks_fetching_failed,
-          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+          instance_of(OmniAuth::Strategies::Apple::JWTFetchingFailed)
         )
         subject.info
       end
