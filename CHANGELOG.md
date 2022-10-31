@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [1.2.2] - 2022-10-31
+
+### Fixed
+
+- [#94](https://github.com/nhosoya/omniauth-apple/pull/98) handle fail! in correct way
+
 ## [1.2.1] - 2022-10-25
 
 ### Fixed
