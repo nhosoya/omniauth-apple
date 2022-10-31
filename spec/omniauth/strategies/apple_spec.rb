@@ -265,7 +265,10 @@ describe OmniAuth::Strategies::Apple do
 
     context 'fails nonce' do
       before(:each) do
-        expect(subject).to receive(:fail!).with(:nonce_mismatch, instance_of(OmniAuth::Strategies::OAuth2::CallbackError))
+        expect(subject).to receive(:fail!).with(
+          :nonce_mismatch,
+          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+        ).and_return([302, {}, ''])
       end
       it 'when differs from session' do
         subject.session['omniauth.nonce'] = 'abc'
@@ -356,8 +359,8 @@ describe OmniAuth::Strategies::Apple do
       it do
         expect(subject).to receive(:fail!).with(
           :jwks_fetching_failed,
-          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
-        )
+          instance_of(OmniAuth::Strategies::Apple::JWTFetchingFailed)
+        ).and_return([302, {}, ''])
         subject.info
       end
     end
@@ -376,7 +379,7 @@ describe OmniAuth::Strategies::Apple do
         expect(subject).to receive(:fail!).with(
           :jwks_fetching_failed,
           instance_of(Faraday::ParsingError)
-        )
+        ).and_return([302, {}, ''])
         subject.info
       end
     end
