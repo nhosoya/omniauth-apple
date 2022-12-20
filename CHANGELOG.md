@@ -1,5 +1,36 @@
 ## [Unreleased]
 
+## [1.2.2] - 2022-10-31
+
+### Fixed
+
+- [#94](https://github.com/nhosoya/omniauth-apple/pull/98) handle fail! in correct way
+
+## [1.2.1] - 2022-10-25
+
+### Fixed
+
+- [#94](https://github.com/nhosoya/omniauth-apple/pull/94) rack-protection.rb is back in rack-protection v3.0.1
+- [#96](https://github.com/nhosoya/omniauth-apple/pull/96) handle JWKS fetch failures
+
+## [1.2.0] - 2022-09-27
+
+### Fixed
+
+- [#91](https://github.com/nhosoya/omniauth-apple/pull/91) explicitly specify auth_scheme for oauth2 v2+ support
+
+## [1.1.0] - 2022-09-26
+
+### Added
+
+- [#67](https://github.com/nhosoya/omniauth-apple/pull/67) Add email_verified and is_private_email
+
+### Fixed
+
+- [#74](https://github.com/nhosoya/omniauth-apple/pull/74) rspec failure - callback_path null pointer
+- [#81](https://github.com/nhosoya/omniauth-apple/pull/81) Allow for omniauth 2.0 series
+- [#88](https://github.com/nhosoya/omniauth-apple/pull/88) update github actions config
+
 ## [1.0.2] - 2021-05-19
 
 ### Fixed
@@ -33,7 +64,7 @@
 
 ### Changed
 
-- [#27](https://github.com/nhosoya/omniauth-apple/pull/27) Update development dependency 
+- [#27](https://github.com/nhosoya/omniauth-apple/pull/27) Update development dependency
 - [#28](https://github.com/nhosoya/omniauth-apple/pull/28) Update README.md
 - [#38](https://github.com/nhosoya/omniauth-apple/pull/38) Refine AuthHash
 - [#39](https://github.com/nhosoya/omniauth-apple/pull/39) Set the default scope to 'email name'
@@ -44,7 +75,9 @@
 
 ## [0.0.1] - 2019-06-07
 
-[Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.2...master
-[1.0.0]: https://github.com/nhosoya/omniauth-apple/compare/v0.0.3...v1.0.0
-[1.0.1]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.0...v1.0.1
+[Unreleased]: https://github.com/nhosoya/omniauth-apple/compare/v1.2.0...master
+[1.2.0]: https://github.com/nhosoya/omniauth-apple/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/nhosoya/omniauth-apple/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/nhosoya/omniauth-apple/compare/v0.0.3...v1.0.0

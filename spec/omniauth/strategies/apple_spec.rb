@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'json'
-require 'omniauth-apple'
 
 describe OmniAuth::Strategies::Apple do
   let(:request) { double('Request', params: {}, cookies: {}, env: {}) }
@@ -61,7 +59,12 @@ describe OmniAuth::Strategies::Apple do
 
   before do
     OmniAuth.config.test_mode = true
-    stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(body: auth_keys.to_json)
+    stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+      body: auth_keys.to_json,
+      headers: {
+       'Content-Type': 'application/json'
+      }
+    )
   end
 
   after do
@@ -80,6 +83,10 @@ describe OmniAuth::Strategies::Apple do
 
     it 'has correct token_url' do
       expect(subject.client.options[:token_url]).to eq('/auth/token')
+    end
+
+    it 'has correct auth_scheme' do
+      expect(subject.client.options[:auth_scheme]).to eq(:request_body)
     end
 
     describe 'overrides' do
@@ -189,13 +196,31 @@ describe OmniAuth::Strategies::Apple do
     end
   end
 
+  describe '#callback_url' do
+    let(:base_url) { 'https://example.com' }
+
+    it 'has the correct default callback path' do
+      allow(subject).to receive(:full_host) { base_url }
+      allow(subject).to receive(:script_name) { '' }
+      expect(subject.send(:callback_url)).to eq(base_url + '/auth/apple/callback')
+    end
+
+    it 'should set the callback path with script_name if present' do
+      allow(subject).to receive(:full_host) { base_url }
+      allow(subject).to receive(:script_name) { '/v1' }
+      expect(subject.send(:callback_url)).to eq(base_url + '/v1/auth/apple/callback')
+    end
+  end
+
   describe '#callback_path' do
     it 'has the correct default callback path' do
+      subject.authorize_params # initializes env, session (for test_mode) and populates 'nonce', 'state'
       expect(subject.callback_path).to eq('/auth/apple/callback')
     end
 
     it 'should set the callback_path parameter if present' do
       options.merge!(callback_path: '/auth/foo/callback')
+      subject.authorize_params # initializes env, session (for test_mode) and populates 'nonce', 'state'
       expect(subject.callback_path).to eq('/auth/foo/callback')
     end
   end
@@ -240,7 +265,10 @@ describe OmniAuth::Strategies::Apple do
 
     context 'fails nonce' do
       before(:each) do
-        expect(subject).to receive(:fail!).with(:nonce_mismatch, instance_of(OmniAuth::Strategies::OAuth2::CallbackError))
+        expect(subject).to receive(:fail!).with(
+          :nonce_mismatch,
+          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+        ).and_return([302, {}, ''])
       end
       it 'when differs from session' do
         subject.session['omniauth.nonce'] = 'abc'
@@ -311,7 +339,49 @@ describe OmniAuth::Strategies::Apple do
         end
       end
     end
+  end
 
- end
+  describe 'network errors' do
+    before do
+      subject.authorize_params # initializes session / populates 'nonce', 'state', etc
+      id_token_payload['nonce'] = subject.session['omniauth.nonce']
+      request.params.merge!('id_token' => id_token)
+    end
 
+    context 'when JWKS fetching failed' do
+      before do
+        stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+          status: 502,
+          body: "<html><head><title>502 Bad Gateway..."
+        )
+      end
+
+      it do
+        expect(subject).to receive(:fail!).with(
+          :jwks_fetching_failed,
+          instance_of(OmniAuth::Strategies::Apple::JWTFetchingFailed)
+        ).and_return([302, {}, ''])
+        subject.info
+      end
+    end
+
+    context 'when JWKS format is invalid' do
+      before do
+        stub_request(:get, 'https://appleid.apple.com/auth/keys').to_return(
+          body: 'invalid',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        )
+      end
+
+      it do
+        expect(subject).to receive(:fail!).with(
+          :jwks_fetching_failed,
+          instance_of(Faraday::ParsingError)
+        ).and_return([302, {}, ''])
+        subject.info
+      end
+    end
+  end
 end

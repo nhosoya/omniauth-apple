@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require_relative '../../../lib/omniauth/apple/version'
 
 describe OmniAuth::Apple do
   it 'has VERSION' do

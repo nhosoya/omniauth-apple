@@ -5,5 +5,7 @@ require 'rspec'
 require 'simplecov'
 SimpleCov.start('test_frameworks')
 
+require 'omniauth-apple'
+
 require 'webmock/rspec'
 WebMock.disable_net_connect!
