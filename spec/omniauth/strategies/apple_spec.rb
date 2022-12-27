@@ -31,8 +31,8 @@ describe OmniAuth::Strategies::Apple do
         ]
     }
   end
-  let(:id_token_header)  do
-    { kid: '1' }
+  let(:kid)  do
+    '1'
   end
   let(:id_token_payload) do
     {
@@ -46,7 +46,11 @@ describe OmniAuth::Strategies::Apple do
         'email_verified' => true,
     }
   end
-  let(:id_token) { JWT.encode(id_token_payload, apple_key, 'RS256', id_token_header) }
+  let(:id_token) do
+    jwt = JSON::JWT.new(id_token_payload)
+    jwt.kid = kid
+    jwt.sign(apple_key).to_s
+  end
   let(:access_token) { OAuth2::AccessToken.from_hash(subject.client, 'id_token' => id_token) }
 
   subject do
@@ -228,11 +232,11 @@ describe OmniAuth::Strategies::Apple do
   describe '#info' do
     let(:user_info_payload) do
       {
-          name: {
-              firstName: 'first',
-              lastName: 'last',
-          },
-          email: 'something@privatrerelay.appleid.com',
+        name: {
+          firstName: 'first',
+          lastName: 'last',
+        },
+        email: 'something@privatrerelay.appleid.com',
       }
     end
     before(:each) do
@@ -266,7 +270,7 @@ describe OmniAuth::Strategies::Apple do
     context 'fails nonce' do
       before(:each) do
         expect(subject).to receive(:fail!).with(
-          :nonce_mismatch,
+          :nonce_invalid,
           instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
         ).and_return([302, {}, ''])
       end
@@ -320,10 +324,14 @@ describe OmniAuth::Strategies::Apple do
       end
 
       context 'issued by invalid issuer' do
-        it 'raises JWT::InvalidIssuerError' do
+        it 'should fail with :iss_invalid' do
           id_token_payload['iss'] = 'https://appleid.badguy.com'
           request.params.merge!('id_token' => id_token)
-          expect { subject.extra }.to raise_error(JWT::InvalidIssuerError)
+          expect(subject).to receive(:fail!).with(
+            :iss_invalid,
+            instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+          )
+          subject.extra
         end
       end
 
@@ -359,7 +367,7 @@ describe OmniAuth::Strategies::Apple do
       it do
         expect(subject).to receive(:fail!).with(
           :jwks_fetching_failed,
-          instance_of(OmniAuth::Strategies::Apple::JWTFetchingFailed)
+          instance_of(Faraday::ServerError)
         ).and_return([302, {}, ''])
         subject.info
       end
@@ -378,7 +386,7 @@ describe OmniAuth::Strategies::Apple do
       it do
         expect(subject).to receive(:fail!).with(
           :jwks_fetching_failed,
-          instance_of(Faraday::ParsingError)
+          instance_of(JSON::ParserError)
         ).and_return([302, {}, ''])
         subject.info
       end
