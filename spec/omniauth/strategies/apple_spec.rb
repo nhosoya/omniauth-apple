@@ -271,19 +271,22 @@ describe OmniAuth::Strategies::Apple do
     end
 
     context 'fails nonce' do
-      before(:each) do
-        expect(subject).to receive(:fail!).with(
-          :nonce_invalid,
-          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
-        ).and_return([302, {}, ''])
+      context 'when differs from session' do
+        before { subject.session['omniauth.nonce'] = 'abc' }
+        it do
+          expect { subject.info }.to raise_error(
+            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
+          )
+        end
       end
-      it 'when differs from session' do
-        subject.session['omniauth.nonce'] = 'abc'
-        subject.info
-      end
-      it 'when missing from session' do
-        subject.session.delete('omniauth.nonce')
-        subject.info
+
+      context 'when missing from session' do
+        before { subject.session.delete('omniauth.nonce') }
+        it do
+          expect { subject.info }.to raise_error(
+            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
+          )
+        end
       end
     end
 
@@ -318,32 +321,39 @@ describe OmniAuth::Strategies::Apple do
           request.params.merge!('id_token' => id_token)
         end
 
-        shared_examples :return_raw_info do
+        context 'when valid' do
           it { is_expected.to include(id_token: id_token) }
           it { is_expected.to include(id_info: id_token_payload) }
-        end
-
-        context 'when valid' do
-          it_behaves_like :return_raw_info
           it do
             expect(strategy).not_to receive(:fail!)
             subject
           end
         end
 
-        context 'when invalid' do
+        context 'when signature invalid' do
+          let(:id_token) do
+            jwt = JSON::JWT.new(id_token_payload)
+            jwt.kid = kid
+            jwt.to_s
+          end
+
+          it do
+            expect { subject }.to raise_error(
+              OmniAuth::Strategies::OAuth2::CallbackError, /id_token_signature_invalid/
+            )
+          end
+        end
+
+        context 'when claims invalid' do
           let(:id_token_payload) do
             valid_id_token_payload.merge(invalid_claims)
           end
 
           shared_examples :invalid_at do |claim|
-            it_behaves_like :return_raw_info
             it do
-              expect(strategy).to receive(:fail!).with(
-                :"#{claim}_invalid",
-                instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+              expect { subject }.to raise_error(
+                OmniAuth::Strategies::OAuth2::CallbackError, "id_token_claims_invalid | #{claim} invalid"
               )
-              subject
             end
           end
 
@@ -406,11 +416,9 @@ describe OmniAuth::Strategies::Apple do
       end
 
       it do
-        expect(subject).to receive(:fail!).with(
-          :jwks_fetching_failed,
-          instance_of(Faraday::ServerError)
-        ).and_return([302, {}, ''])
-        subject.info
+        expect { subject.info }.to raise_error(
+          OmniAuth::Strategies::OAuth2::CallbackError, /jwks_fetching_failed/
+        )
       end
     end
 
@@ -425,11 +433,9 @@ describe OmniAuth::Strategies::Apple do
       end
 
       it do
-        expect(subject).to receive(:fail!).with(
-          :jwks_fetching_failed,
-          instance_of(JSON::ParserError)
-        ).and_return([302, {}, ''])
-        subject.info
+        expect { subject.info }.to raise_error(
+          OmniAuth::Strategies::OAuth2::CallbackError, /jwks_fetching_failed/
+        )
       end
     end
   end

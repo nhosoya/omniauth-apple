@@ -77,20 +77,27 @@ module OmniAuth
         @id_info ||= if request.params&.key?('id_token') || access_token&.params&.key?('id_token')
                        id_token_str = request.params['id_token'] || access_token.params['id_token']
                        id_token = JSON::JWT.decode(id_token_str, :skip_verification)
-                       if (jwk = fetch_jwk(id_token.kid))
-                         id_token.verify! jwk
-                         verify_claims!(id_token)
-                         id_token
-                       else
-                         {}
-                       end
+                       verify_id_token! id_token
+                       id_token
                      end
       end
 
-      def fetch_jwk(kid)
+      def verify_id_token!(id_token)
+        jwk = fetch_jwk! id_token.kid
+        verify_signature! id_token, jwk
+        verify_claims! id_token
+      end
+
+      def fetch_jwk!(kid)
         JSON::JWK::Set::Fetcher.fetch File.join(ISSUER, 'auth/keys'), kid: kid
-      rescue JSON::ParserError, JSON::JWT::Exception, Faraday::Error => e
-        fail!(:jwks_fetching_failed, e) and nil
+      rescue => e
+        raise CallbackError.new(:jwks_fetching_failed, e)
+      end
+
+      def verify_signature!(id_token, jwk)
+        id_token.verify! jwk
+      rescue => e
+        raise CallbackError.new(:id_token_signature_invalid, e)
       end
 
       def verify_claims!(id_token)
@@ -122,9 +129,7 @@ module OmniAuth
       end
 
       def invalid_claim!(claim)
-        key = :"#{claim}_invalid"
-        message = "#{claim} invalid"
-        fail! key, CallbackError.new(key, message)
+        raise CallbackError.new(:id_token_claims_invalid, "#{claim} invalid")
       end
 
       def client_id
