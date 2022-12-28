@@ -34,17 +34,20 @@ describe OmniAuth::Strategies::Apple do
   let(:kid)  do
     '1'
   end
-  let(:id_token_payload) do
+  let(:valid_id_token_payload) do
     {
-        'iss' => 'https://appleid.apple.com',
-        'sub' => 'sub-1',
-        'aud' => 'appid',
-        'exp' => Time.now.to_i + 3600,
-        'iat' => Time.now.to_i,
-        'nonce_supported' => true,
-        'email' => 'something@privatrerelay.appleid.com',
-        'email_verified' => true,
+      iss: 'https://appleid.apple.com',
+      sub: 'sub-1',
+      aud: 'appid',
+      exp: Time.now + 3600,
+      iat: Time.now,
+      nonce_supported: true,
+      email: 'something@privatrerelay.appleid.com',
+      email_verified: true,
     }
+  end
+  let(:id_token_payload) do
+    valid_id_token_payload
   end
   let(:id_token) do
     jwt = JSON::JWT.new(id_token_payload)
@@ -52,14 +55,14 @@ describe OmniAuth::Strategies::Apple do
     jwt.sign(apple_key).to_s
   end
   let(:access_token) { OAuth2::AccessToken.from_hash(subject.client, 'id_token' => id_token) }
-
-  subject do
+  let(:strategy) do
     OmniAuth::Strategies::Apple.new(app, 'appid', 'secret', options ).tap do |strategy|
       allow(strategy).to receive(:request) do
         request
       end
     end
   end
+  subject { strategy }
 
   before do
     OmniAuth.config.test_mode = true
@@ -303,48 +306,86 @@ describe OmniAuth::Strategies::Apple do
 
   describe '#extra' do
     before(:each) do
-      subject.authorize_params # initializes session / populates 'nonce', 'state', etc
-      id_token_payload['nonce'] = subject.session['omniauth.nonce']
+      strategy.authorize_params # initializes session / populates 'nonce', 'state', etc
+      id_token_payload[:nonce] ||= strategy.session['omniauth.nonce']
     end
 
-    describe 'id_token' do
-      context 'issued by valid issuer' do
+    describe 'extra[:raw_info]' do
+      subject { strategy.extra[:raw_info] }
+
+      context 'when the id_token is given' do
         before(:each) do
           request.params.merge!('id_token' => id_token)
         end
-        context 'when the id_token is passed into the access token' do
-          it 'should include id_token when set on the access_token' do
-            expect(subject.extra[:raw_info]).to include(id_token: id_token)
+
+        shared_examples :return_raw_info do
+          it { is_expected.to include(id_token: id_token) }
+          it { is_expected.to include(id_info: id_token_payload) }
+        end
+
+        context 'when valid' do
+          it_behaves_like :return_raw_info
+          it do
+            expect(strategy).not_to receive(:fail!)
+            subject
+          end
+        end
+
+        context 'when invalid' do
+          let(:id_token_payload) do
+            valid_id_token_payload.merge(invalid_claims)
           end
 
-          it 'should include id_info when id_token is set on the access_token' do
-            expect(subject.extra[:raw_info]).to include(id_info: id_token_payload)
+          shared_examples :invalid_at do |claim|
+            it_behaves_like :return_raw_info
+            it do
+              expect(strategy).to receive(:fail!).with(
+                :"#{claim}_invalid",
+                instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
+              )
+              subject
+            end
+          end
+
+          context 'on iss' do
+            let(:invalid_claims) do
+              { iss: 'https://invalid.example.com' }
+            end
+            it_behaves_like :invalid_at, :iss
+          end
+
+          context 'on aud' do
+            let(:invalid_claims) do
+              { aud: 'invalid_client' }
+            end
+            it_behaves_like :invalid_at, :aud
+          end
+
+          context 'on iat' do
+            let(:invalid_claims) do
+              { iat: Time.now + 30 }
+            end
+            it_behaves_like :invalid_at, :iat
+          end
+
+          context 'on exp' do
+            let(:invalid_claims) do
+              { exp: Time.now - 30 }
+            end
+            it_behaves_like :invalid_at, :exp
+          end
+
+          context 'on nonce' do
+            let(:invalid_claims) do
+              { nonce: 'invalid' }
+            end
+            it_behaves_like :invalid_at, :nonce
           end
         end
       end
 
-      context 'issued by invalid issuer' do
-        it 'should fail with :iss_invalid' do
-          id_token_payload['iss'] = 'https://appleid.badguy.com'
-          request.params.merge!('id_token' => id_token)
-          expect(subject).to receive(:fail!).with(
-            :iss_invalid,
-            instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
-          )
-          subject.extra
-        end
-      end
-
-      context 'when the id_token is missing' do
-        it 'should not include id_token' do
-          allow(subject).to receive(:access_token).and_return(nil)
-          expect(subject.extra).not_to have_key(:raw_info)
-        end
-
-        it 'should not include id_info' do
-          allow(subject).to receive(:access_token).and_return(nil)
-          expect(subject.extra).not_to have_key(:raw_info)
-        end
+      context 'otherwise' do
+        it { is_expected.to be_nil }
       end
     end
   end
