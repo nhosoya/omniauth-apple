@@ -1,21 +1,17 @@
 # frozen_string_literal: true
 
 require 'omniauth-oauth2'
-require 'net/https'
+require 'json/jwt'
 
 module OmniAuth
   module Strategies
     class Apple < OmniAuth::Strategies::OAuth2
-      class JWTFetchingFailed < CallbackError
-        def initialize(error_reason = nil, error_uri = nil)
-          super :jwks_fetching_failed, error_reason, error_uri
-        end
-      end
+      ISSUER = 'https://appleid.apple.com'
 
       option :name, 'apple'
 
       option :client_options,
-             site: 'https://appleid.apple.com',
+             site: ISSUER,
              authorize_url: '/auth/authorize',
              token_url: '/auth/token',
              auth_scheme: :request_body
@@ -24,13 +20,13 @@ module OmniAuth
              scope: 'email name'
       option :authorized_client_ids, []
 
-      uid { id_info['sub'] }
+      uid { id_info[:sub] }
 
       # Documentation on parameters
       # https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_rest_api/authenticating_users_with_sign_in_with_apple
       info do
         prune!(
-          sub: id_info['sub'],
+          sub: id_info[:sub],
           email: email,
           first_name: first_name,
           last_name: last_name,
@@ -41,8 +37,8 @@ module OmniAuth
       end
 
       extra do
-        id_token = request.params['id_token'] || access_token&.params&.dig('id_token')
-        prune!(raw_info: {id_info: id_info, user_info: user_info, id_token: id_token})
+        id_token_str = request.params['id_token'] || access_token&.params&.dig('id_token')
+        prune!(raw_info: {id_info: id_info, user_info: user_info, id_token: id_token_str})
       end
 
       def client
@@ -50,12 +46,12 @@ module OmniAuth
       end
 
       def email_verified
-        value = id_info['email_verified']
+        value = id_info[:email_verified]
         value == true || value == "true"
       end
 
       def is_private_email
-        value = id_info['is_private_email']
+        value = id_info[:is_private_email]
         value == true || value == "true"
       end
 
@@ -79,54 +75,68 @@ module OmniAuth
 
       def id_info
         @id_info ||= if request.params&.key?('id_token') || access_token&.params&.key?('id_token')
-                       id_token = request.params['id_token'] || access_token.params['id_token']
-                       if (verification_key = fetch_jwks)
-                         jwt_options = {
-                           verify_iss: true,
-                           iss: 'https://appleid.apple.com',
-                           verify_iat: true,
-                           verify_aud: true,
-                           aud: [options.client_id].concat(options.authorized_client_ids),
-                           algorithms: ['RS256'],
-                           jwks: verification_key
-                         }
-                         payload, _header = ::JWT.decode(id_token, nil, true, jwt_options)
-                         verify_nonce!(payload)
-                         payload
-                       else
-                         {}
-                       end
+                       id_token_str = request.params['id_token'] || access_token.params['id_token']
+                       id_token = JSON::JWT.decode(id_token_str, :skip_verification)
+                       verify_id_token! id_token
+                       id_token
                      end
       end
 
-      def fetch_jwks
-        conn = Faraday.new(headers: {user_agent: 'ruby/omniauth-apple'}) do |c|
-          c.response :json, parser_options: { symbolize_names: true }
-          c.adapter Faraday.default_adapter
-        end
-        res = conn.get 'https://appleid.apple.com/auth/keys'
-        if res.success?
-          res.body
-        else
-          raise JWTFetchingFailed.new('HTTP Error when fetching JWKs')
-        end
-      rescue JWTFetchingFailed, Faraday::Error => e
-        fail!(:jwks_fetching_failed, e) and nil
+      def verify_id_token!(id_token)
+        jwk = fetch_jwk! id_token.kid
+        verify_signature! id_token, jwk
+        verify_claims! id_token
       end
 
-      def verify_nonce!(payload)
-        return unless payload['nonce_supported']
+      def fetch_jwk!(kid)
+        JSON::JWK::Set::Fetcher.fetch File.join(ISSUER, 'auth/keys'), kid: kid
+      rescue => e
+        raise CallbackError.new(:jwks_fetching_failed, e)
+      end
 
-        return if payload['nonce'] && payload['nonce'] == stored_nonce
+      def verify_signature!(id_token, jwk)
+        id_token.verify! jwk
+      rescue => e
+        raise CallbackError.new(:id_token_signature_invalid, e)
+      end
 
-        fail!(:nonce_mismatch, CallbackError.new(:nonce_mismatch, 'nonce mismatch'))
+      def verify_claims!(id_token)
+        verify_iss!(id_token)
+        verify_aud!(id_token)
+        verify_iat!(id_token)
+        verify_exp!(id_token)
+        verify_nonce!(id_token) if id_token[:nonce_supported]
+      end
+
+      def verify_iss!(id_token)
+        invalid_claim! :iss unless id_token[:iss] == ISSUER
+      end
+
+      def verify_aud!(id_token)
+        invalid_claim! :aud unless [options.client_id].concat(options.authorized_client_ids).include?(id_token[:aud])
+      end
+
+      def verify_iat!(id_token)
+        invalid_claim! :iat unless id_token[:iat] <= Time.now.to_i
+      end
+
+      def verify_exp!(id_token)
+        invalid_claim! :exp unless id_token[:exp] >= Time.now.to_i
+      end
+
+      def verify_nonce!(id_token)
+        invalid_claim! :nonce unless id_token[:nonce] && id_token[:nonce] == stored_nonce
+      end
+
+      def invalid_claim!(claim)
+        raise CallbackError.new(:id_token_claims_invalid, "#{claim} invalid")
       end
 
       def client_id
         @client_id ||= if id_info.nil?
                          options.client_id
                        else
-                         id_info['aud'] if options.authorized_client_ids.include? id_info['aud']
+                         id_info[:aud] if options.authorized_client_ids.include? id_info[:aud]
                        end
       end
 
@@ -138,7 +148,7 @@ module OmniAuth
       end
 
       def email
-        id_info['email']
+        id_info[:email]
       end
 
       def first_name
@@ -157,16 +167,15 @@ module OmniAuth
       end
 
       def client_secret
-        payload = {
+        jwt = JSON::JWT.new(
           iss: options.team_id,
-          aud: 'https://appleid.apple.com',
+          aud: ISSUER,
           sub: client_id,
-          iat: Time.now.to_i,
-          exp: Time.now.to_i + 60
-        }
-        headers = { kid: options.key_id }
-
-        ::JWT.encode(payload, private_key, 'ES256', headers)
+          iat: Time.now,
+          exp: Time.now + 60
+        )
+        jwt.kid = options.key_id
+        jwt.sign(private_key).to_s
       end
 
       def private_key
