@@ -270,26 +270,6 @@ describe OmniAuth::Strategies::Apple do
       expect(subject.info[:name]).to eq 'first last'
     end
 
-    context 'fails nonce' do
-      context 'when differs from session' do
-        before { subject.session['omniauth.nonce'] = 'abc' }
-        it do
-          expect { subject.info }.to raise_error(
-            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
-          )
-        end
-      end
-
-      context 'when missing from session' do
-        before { subject.session.delete('omniauth.nonce') }
-        it do
-          expect { subject.info }.to raise_error(
-            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
-          )
-        end
-      end
-    end
-
     context 'with a spoofed email in the user payload' do
       before do
         request.params['user'] = {
@@ -383,13 +363,6 @@ describe OmniAuth::Strategies::Apple do
               { exp: Time.now - 30 }
             end
             it_behaves_like :invalid_at, :exp
-          end
-
-          context 'on nonce' do
-            let(:invalid_claims) do
-              { nonce: 'invalid' }
-            end
-            it_behaves_like :invalid_at, :nonce
           end
         end
       end

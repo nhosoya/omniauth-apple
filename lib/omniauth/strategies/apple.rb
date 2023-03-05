@@ -69,10 +69,6 @@ module OmniAuth
         session['omniauth.nonce'] = SecureRandom.urlsafe_base64(16)
       end
 
-      def stored_nonce
-        session.delete('omniauth.nonce')
-      end
-
       def id_info
         @id_info ||= if request.params&.key?('id_token') || access_token&.params&.key?('id_token')
                        id_token_str = request.params['id_token'] || access_token.params['id_token']
@@ -105,7 +101,6 @@ module OmniAuth
         verify_aud!(id_token)
         verify_iat!(id_token)
         verify_exp!(id_token)
-        verify_nonce!(id_token) if id_token[:nonce_supported]
       end
 
       def verify_iss!(id_token)
@@ -122,10 +117,6 @@ module OmniAuth
 
       def verify_exp!(id_token)
         invalid_claim! :exp unless id_token[:exp] >= Time.now.to_i
-      end
-
-      def verify_nonce!(id_token)
-        invalid_claim! :nonce unless id_token[:nonce] && id_token[:nonce] == stored_nonce
       end
 
       def invalid_claim!(claim)
