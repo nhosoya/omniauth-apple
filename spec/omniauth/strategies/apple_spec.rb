@@ -342,14 +342,20 @@ describe OmniAuth::Strategies::Apple do
 
     context 'ignores nonce' do
       context 'when differs from session' do
-        before { subject.options.nonce = :ignore  }
+        before do
+          subject.options.nonce = :ignore
+          subject.session['omniauth.nonce'] = 'abc'
+        end
         it do
           expect { subject.info }.not_to raise_error
         end
       end
 
       context 'when missing from session' do
-        before { subject.options.nonce = :ignore }
+        before do
+          subject.options.nonce = :ignore
+          subject.session.delete('omniauth.nonce')
+        end
         it do
           expect { subject.info }.not_to raise_error
         end
