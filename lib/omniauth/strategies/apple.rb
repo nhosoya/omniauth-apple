@@ -19,6 +19,8 @@ module OmniAuth
              response_mode: 'form_post',
              scope: 'email name'
       option :authorized_client_ids, []
+      # one of :session (default), :local, :ignore
+      option :nonce, :session
 
       uid { id_info[:sub] }
 
@@ -56,7 +58,8 @@ module OmniAuth
       end
 
       def authorize_params
-        super.merge(nonce: new_nonce)
+        params = super
+        options[:nonce] != :ignore ? params.merge(nonce: new_nonce) : params
       end
 
       def callback_url
@@ -66,11 +69,26 @@ module OmniAuth
       private
 
       def new_nonce
-        session['omniauth.nonce'] = SecureRandom.urlsafe_base64(16)
+        nonce = SecureRandom.urlsafe_base64(16)
+        if options[:nonce] == :local
+          cookies.encrypted[:omniauth_apple_store] =
+            { same_site: :none, expires: 1.hour.from_now, secure: true, value: nonce }
+        else
+          session['omniauth.nonce'] = nonce
+        end
+        nonce
       end
 
       def stored_nonce
-        session.delete('omniauth.nonce')
+        return session.delete("omniauth.nonce") unless options[:nonce] == :local
+
+        nonce = cookies.encrypted[:omniauth_apple_store]
+        cookies.delete :omniauth_apple_store
+        nonce
+      end
+
+      def cookies
+        request.env["action_dispatch.cookies"]
       end
 
       def id_info
@@ -105,7 +123,7 @@ module OmniAuth
         verify_aud!(id_token)
         verify_iat!(id_token)
         verify_exp!(id_token)
-        verify_nonce!(id_token) if id_token[:nonce_supported]
+        verify_nonce!(id_token) if id_token[:nonce_supported] && options[:nonce] != :ignore
       end
 
       def verify_iss!(id_token)

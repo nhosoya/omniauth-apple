@@ -290,6 +290,78 @@ describe OmniAuth::Strategies::Apple do
       end
     end
 
+    context 'nonce with local store' do
+      let(:cookies) { ActionDispatch::Cookies::CookieJar.new(request) }
+
+      before do
+        subject.options.nonce = :local
+        allow(cookies).to receive(:encrypted).and_return(cookies)
+        allow(cookies).to receive(:handle_options)
+        request.env["action_dispatch.cookies"] = cookies
+        # required to proof that we actually fail on the local store
+        strategy.authorize_params
+        subject.session['omniauth.nonce'] = id_token_payload['nonce']
+      end
+
+      context 'when in store succeeds' do
+        before do
+          cookies.encrypted[:omniauth_apple_store] =
+            { same_site: :none, expires: 1.hour.from_now, secure: true, value: id_token_payload['nonce'] }
+        end
+
+        it do
+          expect { subject.info }.not_to raise_error
+        end
+      end
+
+      context 'when differs from store fails' do
+        before do
+          cookies.encrypted[:omniauth_apple_store] =
+            { same_site: :none, expires: 1.hour.from_now, secure: true, value: 'abd' }
+        end
+
+        it do
+          expect { subject.info }.to raise_error(
+            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
+          )
+        end
+      end
+
+      context 'when missing from store fails' do
+        before do
+          cookies.encrypted[:omniauth_apple_store] = nil
+        end
+
+        it do
+          expect { subject.info }.to raise_error(
+            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
+          )
+        end
+      end
+    end
+
+    context 'ignores nonce' do
+      context 'when differs from session' do
+        before do
+          subject.options.nonce = :ignore
+          subject.session['omniauth.nonce'] = 'abc'
+        end
+        it do
+          expect { subject.info }.not_to raise_error
+        end
+      end
+
+      context 'when missing from session' do
+        before do
+          subject.options.nonce = :ignore
+          subject.session.delete('omniauth.nonce')
+        end
+        it do
+          expect { subject.info }.not_to raise_error
+        end
+      end
+    end
+
     context 'with a spoofed email in the user payload' do
       before do
         request.params['user'] = {

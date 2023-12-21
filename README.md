@@ -104,6 +104,17 @@ _other Sign In with Apple guides:_
           pem: ENV['APPLE_P8_FILE_CONTENT_WITH_EXTRA_NEWLINE']
         }
       ```
+    
+## Nonce handling
+
+As Apple returns to the omniauth callback with a **POST** request, the session values that previously were set are not 
+available for `SameSite` cookie strategies other than `:none`. When `:strict` or `:lax` are used (recommended settings)
+the returning nonce validation, that uses the default `nonce` setting `nonce: :session` will fail. To mitigate this, 
+there are two options: 
+* setting `nonce: :local` which will set a short-lived, encrypted cookie with `SameSite: :none` policy to enable nonce
+  validation without compromising session security. 
+* setting `nonce: :ignore` will completely skip `nonce` validation, however this isn't recommended as it opens CSRF 
+  attack possibilities
 
 ## Contributing
 

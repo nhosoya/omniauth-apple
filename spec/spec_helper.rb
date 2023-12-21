@@ -2,6 +2,7 @@
 
 require File.join('bundler', 'setup')
 require 'rspec'
+require 'action_dispatch'
 require 'simplecov'
 SimpleCov.start('test_frameworks')
 
