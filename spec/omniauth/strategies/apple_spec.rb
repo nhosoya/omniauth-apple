@@ -31,31 +31,38 @@ describe OmniAuth::Strategies::Apple do
         ]
     }
   end
-  let(:id_token_header)  do
-    { kid: '1' }
+  let(:kid)  do
+    '1'
   end
-  let(:id_token_payload) do
+  let(:valid_id_token_payload) do
     {
-        'iss' => 'https://appleid.apple.com',
-        'sub' => 'sub-1',
-        'aud' => 'appid',
-        'exp' => Time.now.to_i + 3600,
-        'iat' => Time.now.to_i,
-        'nonce_supported' => true,
-        'email' => 'something@privatrerelay.appleid.com',
-        'email_verified' => true,
+      iss: 'https://appleid.apple.com',
+      sub: 'sub-1',
+      aud: 'appid',
+      exp: Time.now + 3600,
+      iat: Time.now,
+      nonce_supported: true,
+      email: 'something@privatrerelay.appleid.com',
+      email_verified: true,
     }
   end
-  let(:id_token) { JWT.encode(id_token_payload, apple_key, 'RS256', id_token_header) }
+  let(:id_token_payload) do
+    valid_id_token_payload
+  end
+  let(:id_token) do
+    jwt = JSON::JWT.new(id_token_payload)
+    jwt.kid = kid
+    jwt.sign(apple_key).to_s
+  end
   let(:access_token) { OAuth2::AccessToken.from_hash(subject.client, 'id_token' => id_token) }
-
-  subject do
+  let(:strategy) do
     OmniAuth::Strategies::Apple.new(app, 'appid', 'secret', options ).tap do |strategy|
       allow(strategy).to receive(:request) do
         request
       end
     end
   end
+  subject { strategy }
 
   before do
     OmniAuth.config.test_mode = true
@@ -228,11 +235,11 @@ describe OmniAuth::Strategies::Apple do
   describe '#info' do
     let(:user_info_payload) do
       {
-          name: {
-              firstName: 'first',
-              lastName: 'last',
-          },
-          email: 'something@privatrerelay.appleid.com',
+        name: {
+          firstName: 'first',
+          lastName: 'last',
+        },
+        email: 'something@privatrerelay.appleid.com',
       }
     end
     before(:each) do
@@ -264,19 +271,22 @@ describe OmniAuth::Strategies::Apple do
     end
 
     context 'fails nonce' do
-      before(:each) do
-        expect(subject).to receive(:fail!).with(
-          :nonce_mismatch,
-          instance_of(OmniAuth::Strategies::OAuth2::CallbackError)
-        ).and_return([302, {}, ''])
+      context 'when differs from session' do
+        before { subject.session['omniauth.nonce'] = 'abc' }
+        it do
+          expect { subject.info }.to raise_error(
+            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
+          )
+        end
       end
-      it 'when differs from session' do
-        subject.session['omniauth.nonce'] = 'abc'
-        subject.info
-      end
-      it 'when missing from session' do
-        subject.session.delete('omniauth.nonce')
-        subject.info
+
+      context 'when missing from session' do
+        before { subject.session.delete('omniauth.nonce') }
+        it do
+          expect { subject.info }.to raise_error(
+            OmniAuth::Strategies::OAuth2::CallbackError, 'id_token_claims_invalid | nonce invalid'
+          )
+        end
       end
     end
 
@@ -299,44 +309,93 @@ describe OmniAuth::Strategies::Apple do
 
   describe '#extra' do
     before(:each) do
-      subject.authorize_params # initializes session / populates 'nonce', 'state', etc
-      id_token_payload['nonce'] = subject.session['omniauth.nonce']
+      strategy.authorize_params # initializes session / populates 'nonce', 'state', etc
+      id_token_payload[:nonce] ||= strategy.session['omniauth.nonce']
     end
 
-    describe 'id_token' do
-      context 'issued by valid issuer' do
+    describe 'extra[:raw_info]' do
+      subject { strategy.extra[:raw_info] }
+
+      context 'when the id_token is given' do
         before(:each) do
           request.params.merge!('id_token' => id_token)
         end
-        context 'when the id_token is passed into the access token' do
-          it 'should include id_token when set on the access_token' do
-            expect(subject.extra[:raw_info]).to include(id_token: id_token)
+
+        context 'when valid' do
+          it { is_expected.to include(id_token: id_token) }
+          it { is_expected.to include(id_info: id_token_payload) }
+          it do
+            expect(strategy).not_to receive(:fail!)
+            subject
+          end
+        end
+
+        context 'when signature invalid' do
+          let(:id_token) do
+            jwt = JSON::JWT.new(id_token_payload)
+            jwt.kid = kid
+            jwt.to_s
           end
 
-          it 'should include id_info when id_token is set on the access_token' do
-            expect(subject.extra[:raw_info]).to include(id_info: id_token_payload)
+          it do
+            expect { subject }.to raise_error(
+              OmniAuth::Strategies::OAuth2::CallbackError, /id_token_signature_invalid/
+            )
+          end
+        end
+
+        context 'when claims invalid' do
+          let(:id_token_payload) do
+            valid_id_token_payload.merge(invalid_claims)
+          end
+
+          shared_examples :invalid_at do |claim|
+            it do
+              expect { subject }.to raise_error(
+                OmniAuth::Strategies::OAuth2::CallbackError, "id_token_claims_invalid | #{claim} invalid"
+              )
+            end
+          end
+
+          context 'on iss' do
+            let(:invalid_claims) do
+              { iss: 'https://invalid.example.com' }
+            end
+            it_behaves_like :invalid_at, :iss
+          end
+
+          context 'on aud' do
+            let(:invalid_claims) do
+              { aud: 'invalid_client' }
+            end
+            it_behaves_like :invalid_at, :aud
+          end
+
+          context 'on iat' do
+            let(:invalid_claims) do
+              { iat: Time.now + 30 }
+            end
+            it_behaves_like :invalid_at, :iat
+          end
+
+          context 'on exp' do
+            let(:invalid_claims) do
+              { exp: Time.now - 30 }
+            end
+            it_behaves_like :invalid_at, :exp
+          end
+
+          context 'on nonce' do
+            let(:invalid_claims) do
+              { nonce: 'invalid' }
+            end
+            it_behaves_like :invalid_at, :nonce
           end
         end
       end
 
-      context 'issued by invalid issuer' do
-        it 'raises JWT::InvalidIssuerError' do
-          id_token_payload['iss'] = 'https://appleid.badguy.com'
-          request.params.merge!('id_token' => id_token)
-          expect { subject.extra }.to raise_error(JWT::InvalidIssuerError)
-        end
-      end
-
-      context 'when the id_token is missing' do
-        it 'should not include id_token' do
-          allow(subject).to receive(:access_token).and_return(nil)
-          expect(subject.extra).not_to have_key(:raw_info)
-        end
-
-        it 'should not include id_info' do
-          allow(subject).to receive(:access_token).and_return(nil)
-          expect(subject.extra).not_to have_key(:raw_info)
-        end
+      context 'otherwise' do
+        it { is_expected.to be_nil }
       end
     end
   end
@@ -357,11 +416,9 @@ describe OmniAuth::Strategies::Apple do
       end
 
       it do
-        expect(subject).to receive(:fail!).with(
-          :jwks_fetching_failed,
-          instance_of(OmniAuth::Strategies::Apple::JWTFetchingFailed)
-        ).and_return([302, {}, ''])
-        subject.info
+        expect { subject.info }.to raise_error(
+          OmniAuth::Strategies::OAuth2::CallbackError, /jwks_fetching_failed/
+        )
       end
     end
 
@@ -376,11 +433,9 @@ describe OmniAuth::Strategies::Apple do
       end
 
       it do
-        expect(subject).to receive(:fail!).with(
-          :jwks_fetching_failed,
-          instance_of(Faraday::ParsingError)
-        ).and_return([302, {}, ''])
-        subject.info
+        expect { subject.info }.to raise_error(
+          OmniAuth::Strategies::OAuth2::CallbackError, /jwks_fetching_failed/
+        )
       end
     end
   end
