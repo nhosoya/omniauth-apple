@@ -65,6 +65,10 @@ module OmniAuth
 
       private
 
+      def authorized_client_ids
+        [options.client_id].concat(options.authorized_client_ids)
+      end
+
       def new_nonce
         session['omniauth.nonce'] = SecureRandom.urlsafe_base64(16)
       end
@@ -113,7 +117,7 @@ module OmniAuth
       end
 
       def verify_aud!(id_token)
-        invalid_claim! :aud unless [options.client_id].concat(options.authorized_client_ids).include?(id_token[:aud])
+        invalid_claim! :aud unless authorized_client_ids.include?(id_token[:aud])
       end
 
       def verify_iat!(id_token)
@@ -135,8 +139,8 @@ module OmniAuth
       def client_id
         @client_id ||= if id_info.nil?
                          options.client_id
-                       else
-                         id_info[:aud] if options.authorized_client_ids.include? id_info[:aud]
+                       elsif authorized_client_ids.include?(id_info[:aud])
+                         id_info[:aud]
                        end
       end
 
