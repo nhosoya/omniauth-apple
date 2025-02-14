@@ -105,9 +105,19 @@ Usually the flow is as followed:
 5. Your Rails server can then respond to the client's HTTP request with the user's data.
 
 The `omniauth-apple` gem supports this mode if you provide an additional configuration option.
+
+Failing to enable the `provider_ignores_state` option will result in a `csrf_detected` error like this one
+```
+ERROR -- omniauth: (apple) Authentication failure! csrf_detected: OmniAuth::Strategies::OAuth2::CallbackError, csrf_detected | CSRF detected
+```
+
 ```ruby
 Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :apple, ENV['APPLE_CLIENT_ID'], '', {
+  # Make sure that the `ENV['APPLE_CLIENT_ID']` you use in your configuration is the same as the one used in your
+  # client-side application.
+  apple_client_id = ENV['APPLE_CLIENT_ID']
+
+  provider :apple, apple_client_id, '', {
     key_id: ENV['APPLE_KEY_ID'],
     pem: ENV['APPLE_PRIVATE_KEY'],
     scope: 'email name',
@@ -118,8 +128,6 @@ Rails.application.config.middleware.use OmniAuth::Builder do
   }
 end
 ```
-
-Make sure that the `ENV['APPLE_CLIENT_ID']` you use in your configuration is the same as the one used in your client-side application.
 
 #### Multi-platform client-side applications
 If you use your Rails API with multiple different client-side applications on different platforms (for example you might have a web app and a IOS app) then you might have to use different `APPLE_CLIENT_ID` for these apps.
@@ -152,10 +160,19 @@ Then in your application authenticate the user with the following method
 ```js
 const handleAppleSignIn = async () => {
   AppleID.auth.init({
-    clientID: '<APPLE_CLIENT_ID>' // In web application this will be a Apple Service ID, not your App's Bundle ID
-    redirectURI: '<YOUR_REDIRECT_URI>' // In popup mode this won't do anything but still needs to be present. You can use the current page's URL
+    // In web application this will be a Apple Service ID, not your App's Bundle ID
+    clientID: '<APPLE_CLIENT_ID>'
+
+    // In popup mode this won't do anything but still needs to be present. You can use the current page's URL
+    redirectURI: '<YOUR_REDIRECT_URI>',
+
     scope: 'email name',
-    state: 'apple' // Use this if your `redirectURI` handle multiple different omniauth providers. When redirecting to that page the `state` will be included in the query params and will help you identity which provider is redirecting to your application.
+
+    // Use this if your `redirectURI` handle multiple different omniauth providers. When redirecting to that page the
+    // `state` will be included in the query params and will help you identity which provider is redirecting to your
+    // application.
+    state: 'apple',
+
     usePopup: true
   })
 
