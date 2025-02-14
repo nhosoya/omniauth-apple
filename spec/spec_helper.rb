@@ -10,3 +10,5 @@ OmniAuth.config.logger = Logger.new(nil)
 
 require 'webmock/rspec'
 WebMock.disable_net_connect!
+
+require 'pry'
