@@ -2,6 +2,7 @@
 
 require 'omniauth-oauth2'
 require 'json/jwt'
+require 'pry'
 
 module OmniAuth
   module Strategies
@@ -60,7 +61,7 @@ module OmniAuth
       end
 
       def callback_url
-        options[:redirect_uri] || (full_host + callback_path)
+        request.params['redirect_uri'] || options[:redirect_uri] || (full_host + callback_path)
       end
 
       private

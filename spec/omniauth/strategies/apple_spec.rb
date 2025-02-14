@@ -204,18 +204,31 @@ describe OmniAuth::Strategies::Apple do
   end
 
   describe '#callback_url' do
-    let(:base_url) { 'https://example.com' }
+    let(:full_host) { 'https://example.com' }
+    let (:params_redirect_uri) { 'https://your.client.domain/callback' }
+    let(:redirect_uri) { 'https://your.api.domain/callback' }
+    let (:script_name) { '/v1' }
 
-    it 'has the correct default callback path' do
-      allow(subject).to receive(:full_host) { base_url }
-      allow(subject).to receive(:script_name) { '' }
-      expect(subject.send(:callback_url)).to eq(base_url + '/auth/apple/callback')
+    before do
+      allow(subject).to receive_messages(full_host:)
+      allow(subject).to receive_messages(script_name:)
     end
 
-    it 'should set the callback path with script_name if present' do
-      allow(subject).to receive(:full_host) { base_url }
-      allow(subject).to receive(:script_name) { '/v1' }
-      expect(subject.send(:callback_url)).to eq(base_url + '/v1/auth/apple/callback')
+    it 'returns the `request.params[:redirect_uri]` when present' do
+      request = double('Request', params: { "redirect_uri" => params_redirect_uri }, cookies: {}, env: {})
+      allow(subject).to receive_messages(request:)
+      subject.options.merge!({ redirect_uri: })
+
+      expect(subject.send(:callback_url)).to eq params_redirect_uri
+    end
+
+    it "returns the `options[:redirect_uri]` when present and `request.params[:redirect_uri]` is blank" do
+      subject.options.merge!({ redirect_uri: })
+      expect(subject.send(:callback_url)).to eq redirect_uri
+    end
+
+    it 'defaults to the callback_path when `options[:redirect_uri]` and `request.params[:redirect_uri]` are blank' do
+      expect(subject.send(:callback_url)).to eq "#{full_host}#{script_name}/auth/apple/callback"
     end
   end
 
