@@ -1,109 +1,233 @@
 ![build](https://github.com/nhosoya/omniauth-apple/workflows/RSpec/badge.svg?branch=master&event=push)
 
-# OmniAuth::Apple
+# OmniAuth Apple Strategy
 
 OmniAuth strategy for [Sign In with Apple](https://developer.apple.com/sign-in-with-apple/).
 
 ## Installation
 
 Add this line to your application's Gemfile:
-
 ```ruby
-gem 'omniauth-apple'
+gem 'omniauth-apple', '~> 1.3.0'
 ```
 
-And then execute:
+Then execute
+```bash
+bundle install
+```
 
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install omniauth-apple
+Or install it yourself globally with
+```bash
+gem install omniauth-apple
+```
 
 ## Usage
+Using Devise ? Skip to <a href="#use-with-devise">Use with Devise</a>
 
+Here's an example for adding the middleware to a Rails app in `config/initializers/omniauth.rb`
 ```ruby
 Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :apple, ENV['CLIENT_ID'], '',
-           {
-             scope: 'email name',
-             team_id: ENV['TEAM_ID'],
-             key_id: ENV['KEY_ID'],
-             pem: ENV['PRIVATE_KEY']
-           }
+  provider :apple, ENV['APPLE_CLIENT_ID'], '', {
+    key_id: ENV['APPLE_KEY_ID'],
+    pem: ENV['APPLE_PRIVATE_KEY'],
+    scope: 'email name',
+    team_id: ENV['APPLE_TEAM_ID']
+  }
 end
 ```
 
-## Configuring "Sign In with Apple"
+You can find more confiduration options in the <a href="#configuration">Configuration</a> section.
 
-_other Sign In with Apple guides:_
-- ["How To" by janak amarasena (2019)](https://medium.com/identity-beyond-borders/how-to-configure-sign-in-with-apple-77c61e336003)
-- [the docs, by Apple](https://developer.apple.com/sign-in-with-apple/)
+NOTE: Any change made to the middleware's configuration will required you to reset your server before taking action.
 
-### Look out for the values you need for your config
-  1. your domain and subdomains, something like: `myapp.com`, `www.myapp.com`
-  2. your redirect uri, something like: `https://myapp.com/users/auth/apple/callback` (check `rails routes` to be sure)
-  3. omniauth's "client id" will be Apple's "bundle id", something like: `com.myapp`
-  4. you will get the "team id" value from Apple when you create your _**App Id**_, something like: `H000000B`
-  5. Apple will give you a `.p8` file, which you'll use to GENERATE your `:pem` value
+### Use with Devise
+When using `omniauth-apple` with Devise you must omit the `config/initializers/omniauth.rb` file.
+Instead you can add the middleware's configuration in `config/initializers/devise.rb`
+```ruby
+# config/initializers/devise.rb
+config.omniauth :apple, 'APPLE_CLIENT_ID', '', {
+  key_id: ENV['APPLE_KEY_ID'],
+  pem: ENV['APPLE_PRIVATE_KEY'],
+  scope: 'email name',
+  team_id: ENV['APPLE_TEAM_ID']
+}
+```
 
-### Steps
+Make sure to your Omniauthable model includes the new provider. Generally that model is your `User` model.
 
-1. Log into your [Apple Developer Account](https://idmsa.apple.com/IDMSWebAuth/signin?appIdKey=891bd3417a7776362562d2197f89480a8547b108fd934911bcbea0110d07f757&path=%2Faccount%2F&rv=1)
-    (if you don't have one, you can [create one here](https://appleid.apple.com/account?appId=632&returnUrl=https%3A%2F%2Fdeveloper.apple.com%2Faccount%2F))
+You should also create a class method to register and find users from a omniauth provider's callback in your model.
+```ruby
+# app/models.user.rb
+def User < ApplicationRecord
+  devise :omniauthable, omniauth_providers: %i[apple]
 
-2. Get an App Id with the "Sign In with Apple" capability
-    - go to your [Identifiers](https://developer.apple.com/account/resources/identifiers/list) list
-    - [start a new Identifier](https://developer.apple.com/account/resources/identifiers/add/bundleId) by clicking on the + sign in the Identifiers List
-    - select _**App IDs**_ and click _**continue**_
-    - select _**App**_ and _**continue**_
-    - enter a description and a bundle id
-    - check the **_"Sign In with Apple"_** capability
-    - save it
+  class << self
+    def from_omniauth(access_token)
+      user = find_or_initialize_by(email: access_token.info['email'])
+      user.update!(name: access_token.info['name'], password: Devise.friendly_token[0, 20]) unless user.persisted?
+      user
+    end
+  end
+end
+```
 
-3. Get a Services Id (which we will use as our client id)
-    - go to your [Identifiers](https://developer.apple.com/account/resources/identifiers/list) list
-    - [start a new Identifier](https://developer.apple.com/account/resources/identifiers/add/bundleId) by clicking on the + sign in the Identifiers List
-    - select _**Services IDs**_ and click _**continue**_
-    - enter a description and a bundle id
-    - make sure **_"Sign In with Apple"_** is checked, then click _**configure**_
-    - make sure the Primary App ID matches the App ID you configured earlier
-    -  enter all the subdomains you might use (comma delimited):
+If you want to override Devise's omniauth callback management then update your routes with a custom controller inheriting from Devise's `Devise::OmniauthCallbacksController`
+```ruby
+# config/routes.rb
+devise_for :users, controllers: { omniauth_callbacks: 'users/omniauth_callbacks' }
+```
+```ruby
+# app/controllers/users/omniauth_callbacks_controller.rb
+class Users::OmniauthCallbacksController < Devise::OmniauthCallbacksController
+  def apple
+    # User.from_omniauth needs to be implemented in your `User` model
+    @user = User.from_omniauth(request.env['omniauth.auth'])
 
-        example.com,www.example.com
+    if @user.persisted?
+      # handle success
+    else
+      # handle error
+    end
+  end
+end
+```
 
-    - enter all the redirect URLS you might use (comma delimited):
+More info can be found in Devise's [wiki](https://github.com/heartcombo/devise/wiki/OmniAuth:-Overview)
 
-       https://example.com/users/auth/apple/callback,https://example.com/users/auth/apple/callback
+### Use with Hybrid application
+When working with a Rails API and a separated client-side application you will want to handle omniauth authentication differently from a fullstack Rails application.
 
-    -  save the "Sign In with Apple" capability config and the Service Id
+Usually the flow is as followed:
+1. The client (web browser or iOS device for example) authenticate the user directly via AppleJS' API or the native iOS API. During this process a popup might appear prompting the user for their credentials or the user might be redirected to a Apple sign in page.
+2. On successful authentication Apple returns a one-time use authorization `code` as well as a identification `id_token`.
+3. Using an HTTP request those params are POSTed to the Rails API's apple omniauth callback route, usually that would be `https://your.api.domain/users/auth/apple/callback`.
+4. The `omniauth-apple` gem will validate the token and code via a server-side request to Apple. If both are valid then Apple will return a `access_token` which can be used to find an existing user or create a new one if this is the first time such process is run for that user.
+5. Your Rails server can then respond to the client's HTTP request with the user's data.
 
-4. Get a Secret Key
-    - go to your [Keys](https://developer.apple.com/account/resources/authkeys/list) list
-    - [start a new Key](https://developer.apple.com/account/resources/authkeys/add) by clicking on the + sign in the Keys List
-    - enter a name
-    - make sure **_"Sign In with Apple"_** is checked, then click _**configure**_
-    - make sure the Primary App ID matches the App ID you configured earlier
-    - save the "Sign In with Apple" capability
-    - click "continue" to finish the Key config (you will be prompted to _**Download Your Key**_)
-    - Apple will give you a `.p8` file, keep it safe and secure (don't commit it).
+The `omniauth-apple` gem supports this mode if you provide an additional configuration option.
 
-### Mapping Apple Values to OmniAuth Values
-  - your `:team_id` is in the top-right of your App Id config (aka _**App ID Prefix**_), it looks like: `H000000B`
-  - your `:client_id` is in the top-right of your Services Id config (aka _**Identifier**_), it looks like: `com.example`
-  - your `:key_id` is on the left side of your Key Details page, it looks like: `XYZ000000`
-  - your `:pem` is the content of the `.p8` file you got from Apple, _**with an extra newline at the end**_
+Failing to enable the `provider_ignores_state` option will result in a `csrf_detected` error like this one
+```
+ERROR -- omniauth: (apple) Authentication failure! csrf_detected: OmniAuth::Strategies::OAuth2::CallbackError, csrf_detected | CSRF detected
+```
 
-  - example from a Devise config:
+```ruby
+Rails.application.config.middleware.use OmniAuth::Builder do
+  # Make sure that the `ENV['APPLE_CLIENT_ID']` you use in your configuration is the same as the one used in your
+  # client-side application.
+  apple_client_id = ENV['APPLE_CLIENT_ID']
 
-      ```ruby
-        config.omniauth :apple, ENV['APPLE_SERVICE_BUNDLE_ID'], '', {
-          scope: 'email name',
-          team_id: ENV['APPLE_APP_ID_PREFIX'],
-          key_id: ENV['APPLE_KEY_ID'],
-          pem: ENV['APPLE_P8_FILE_CONTENT_WITH_EXTRA_NEWLINE']
-        }
-      ```
+  provider :apple, apple_client_id, '', {
+    key_id: ENV['APPLE_KEY_ID'],
+    pem: ENV['APPLE_PRIVATE_KEY'],
+    scope: 'email name',
+    team_id: ENV['APPLE_TEAM_ID'],
+
+    # Add this to your existing configuration
+    provider_ignores_state: true,
+  }
+end
+```
+
+#### Multi-platform client-side applications
+If you use your Rails API with multiple different client-side applications on different platforms (for example you might have a web app and a iOS app) then you might have to use different `APPLE_CLIENT_ID` for these apps.
+
+When this is the case you can register additional client ids for your middleware by using the `authorized_client_ids` option.
+```ruby
+Rails.application.config.middleware.use OmniAuth::Builder do
+  provider :apple, ENV['APPLE_CLIENT_ID'], '', {
+    key_id: ENV['APPLE_KEY_ID'],
+    pem: ENV['APPLE_PRIVATE_KEY'],
+    scope: 'email name',
+    provider_ignores_state: true,
+    team_id: ENV['APPLE_TEAM_ID'],
+
+    # Add this to your existing configuration
+    authorized_client_ids: [ENV['OTHER_APPLE_CLIENT_ID']]
+  }
+end
+```
+
+#### AppleJS example
+*Example inspired from https://developer.apple.com/documentation/sign_in_with_apple/configuring-your-webpage-for-sign-in-with-apple*
+
+Include Apple's CDN in your html by adding this script tag at the end of your `<body>`
+```html
+<script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+```
+
+Then in your application authenticate the user with the following method
+```js
+const handleAppleSignIn = async () => {
+  AppleID.auth.init({
+    // In web application this will be a Apple Service ID, not your App's Bundle ID
+    clientID: '<APPLE_CLIENT_ID>'
+
+    // In popup mode this won't do anything but still needs to be present. You can use the current page's URL
+    redirectURI: '<YOUR_REDIRECT_URI>',
+
+    scope: 'email name',
+
+    // Use this if your `redirectURI` handle multiple different omniauth providers. When redirecting to that page the
+    // `state` will be included in the query params and will help you identity which provider is redirecting to your
+    // application.
+    state: 'apple',
+
+    usePopup: true
+  })
+
+  try {
+    const { authorization: { code, id_token, state } } = await AppleID.auth.signIn()
+
+    // The same `redirect_uri` needs to be sent to your API you will end up with a redirect_uri_mismatch error.
+    const params = new URLSearchParams({ code, id_token, redirect_uri: '<YOUR_REDIRECT_URI>' })
+
+    // `omniauth-apple` does not support sending data in the request's body so your params need to be appended to the URL.
+    const apiURL = `https://your.api.domain/users/auth/apple/callback?${params.toString()}`
+
+    const user = await fetch(url, {
+      headers: { 'Content-type': 'application/json' },
+      method: 'POST'
+    })
+  } catch (error) {
+    // handle error: { error: string }
+  }
+}
+```
+
+#### iOS Example
+*See: https://developer.apple.com/documentation/AuthenticationServices/implementing-user-authentication-with-sign-in-with-apple*
+
+Note that for iOS devices the `APPLE_CLIENT_ID` you need to use is your app's Bundle ID, not a Service ID.
+
+## Configuration
+In order to configure `omniauth-apple` properly you will need to have an active Apple App.
+If that is not the case then start by logging into your [Apple Developer Account](https://idmsa.apple.com/IDMSWebAuth/signin?appIdKey=891bd3417a7776362562d2197f89480a8547b108fd934911bcbea0110d07f757&path=%2Faccount%2F&rv=1) (if you don't have one, you can [create one here](https://appleid.apple.com/account?appId=632&returnUrl=https%3A%2F%2Fdeveloper.apple.com%2Faccount%2F)).
+
+Then you can create an App ID by going to your [Identifiers](https://developer.apple.com/account/resources/identifiers/list), click on the [+](https://developer.apple.com/account/resources/identifiers/add/bundleId) button, select **App IDs** and **continue**, select **App** and **continue**, enter a **description** and a **Bundle ID**, scroll down and check the **Sign in with Apple** capability then save your App.
+
+
+### CLIENT_ID
+The `CLIENT_ID` will depend on the platform you make your authentication request from.
+
+|Platform|Description|
+|--|--|
+|iOS|The `CLIENT_ID` for requests made from a iOS native device is your Apple App's Bundle ID.<br><br>To find your App's Bundle ID access your [Identifiers](https://developer.apple.com/account/resources/identifiers/list) and select your **App ID**. You will find your **Bundle ID** in the App ID's configuration which should look something like `domain.custom.your`|
+|Web|The `CLIENT_ID` for requests made from a web browser or server is a Apple **Service ID**'s' **Identifier**.<br><br>To create a Service ID go to your [Identifiers](https://developer.apple.com/account/resources/identifiers/list), click on the [+](https://developer.apple.com/account/resources/identifiers/add/bundleId) button, select **Service IDs** and **continue**, enter a **description** and a **Identifier** (for example `domain.custom.your.signin`) and **continue**, enable **Sign in with Apple** then configure it by providing your **Primary App ID** (that will usually the **App ID** you already created) as well as the **domain** and **redirect_uri** used when you make the authorization request.<br>Finally save your Service ID and copy the **Identifier**|
+
+### CLIENT_SECRET
+`omniauth-apple` does not use a `CLIENT_SECRET`. You can leave this option as `''`
+
+### Options
+
+|Key|Description|Required|
+|---|-----------|--|
+|authorized_client_ids|A list of authorized client_ids in addition to your `APPLE_CLIENT_ID`|false|
+|key_id|The **Key ID** of a encryption key you generated.<br><br>To create a new encryption key access your [Keys](https://developer.apple.com/account/resources/authkeys/list), click on the [+](https://developer.apple.com/account/resources/authkeys/add) button, enter a **Key Name** and a **Key Usage Description**, enable **Sign Iin with Apple** and configure it with your **Primary App ID** (that will usually the **App ID** you already created) then save the Key.<br><br>The **Key ID** will be found in your Key Details|true|
+|pem|The encryption key of the **Key ID** you generated.<br><br>Once your **Key ID** has been created you can **Download** the key and open the file in your IDE. The `pem` is the content of that file **with an extra newline at the end**<br><br>**DO NOT COMMIT THIS ENCRYPTION KEY**|true|
+|provider_ignores_state|Necessary when skipping to the callback phase directly (which is the case for hybrid configuration)|Only with <a href="#use-with-hybrid-application">Hybrid Applications</a>|
+|scope|The amount of user information requested from Apple.|true|
+|team_id|The **App ID Prefix** of the **App ID** you created earlier.<br><br>Access your [Identifiers](https://developer.apple.com/account/resources/identifiers/list), select your **App ID** then copy the **App ID Prefix** found in the App ID's Configuration|true|
 
 ## Contributing
 
