@@ -98,7 +98,7 @@ More info can be found in Devise's [wiki](https://github.com/heartcombo/devise/w
 When working with a Rails API and a separated client-side application you will want to handle omniauth authentication differently from a fullstack Rails application.
 
 Usually the flow is as followed:
-1. The client (web browser or ios device for example) authenticate the user directly via AppleJS' API or the native IOS API. During this process a popup might appear prompting the user for their credentials or the user might be redirected to a Apple sign in page.
+1. The client (web browser or iOS device for example) authenticate the user directly via AppleJS' API or the native iOS API. During this process a popup might appear prompting the user for their credentials or the user might be redirected to a Apple sign in page.
 2. On successful authentication Apple returns a one-time use authorization `code` as well as a identification `id_token`.
 3. Using an HTTP request those params are POSTed to the Rails API's apple omniauth callback route, usually that would be `https://your.api.domain/users/auth/apple/callback`.
 4. The `omniauth-apple` gem will validate the token and code via a server-side request to Apple. If both are valid then Apple will return a `access_token` which can be used to find an existing user or create a new one if this is the first time such process is run for that user.
@@ -130,7 +130,7 @@ end
 ```
 
 #### Multi-platform client-side applications
-If you use your Rails API with multiple different client-side applications on different platforms (for example you might have a web app and a IOS app) then you might have to use different `APPLE_CLIENT_ID` for these apps.
+If you use your Rails API with multiple different client-side applications on different platforms (for example you might have a web app and a iOS app) then you might have to use different `APPLE_CLIENT_ID` for these apps.
 
 When this is the case you can register additional client ids for your middleware by using the `authorized_client_ids` option.
 ```ruby
@@ -195,10 +195,10 @@ const handleAppleSignIn = async () => {
 }
 ```
 
-#### IOS Example
+#### iOS Example
 *See: https://developer.apple.com/documentation/AuthenticationServices/implementing-user-authentication-with-sign-in-with-apple*
 
-Note that for IOS devices the `APPLE_CLIENT_ID` you need to use is your app's Bundle ID, not a Service ID.
+Note that for iOS devices the `APPLE_CLIENT_ID` you need to use is your app's Bundle ID, not a Service ID.
 
 ## Configuration
 In order to configure `omniauth-apple` properly you will need to have an active Apple App.
@@ -212,7 +212,7 @@ The `CLIENT_ID` will depend on the platform you make your authentication request
 
 |Platform|Description|
 |--|--|
-|IOS|The `CLIENT_ID` for requests made from a IOS native device is your Apple App's Bundle ID.<br><br>To find your App's Bundle ID access your [Identifiers](https://developer.apple.com/account/resources/identifiers/list) and select your **App ID**. You will find your **Bundle ID** in the App ID's configuration which should look something like `domain.custom.your`|
+|iOS|The `CLIENT_ID` for requests made from a iOS native device is your Apple App's Bundle ID.<br><br>To find your App's Bundle ID access your [Identifiers](https://developer.apple.com/account/resources/identifiers/list) and select your **App ID**. You will find your **Bundle ID** in the App ID's configuration which should look something like `domain.custom.your`|
 |Web|The `CLIENT_ID` for requests made from a web browser or server is a Apple **Service ID**'s' **Identifier**.<br><br>To create a Service ID go to your [Identifiers](https://developer.apple.com/account/resources/identifiers/list), click on the [+](https://developer.apple.com/account/resources/identifiers/add/bundleId) button, select **Service IDs** and **continue**, enter a **description** and a **Identifier** (for example `domain.custom.your.signin`) and **continue**, enable **Sign in with Apple** then configure it by providing your **Primary App ID** (that will usually the **App ID** you already created) as well as the **domain** and **redirect_uri** used when you make the authorization request.<br>Finally save your Service ID and copy the **Identifier**|
 
 ### CLIENT_SECRET
