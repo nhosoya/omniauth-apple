@@ -39,8 +39,8 @@ describe OmniAuth::Strategies::Apple do
       iss: 'https://appleid.apple.com',
       sub: 'sub-1',
       aud: 'appid',
-      exp: Time.now + 3600,
-      iat: Time.now,
+      exp: (Time.now + 3600).to_i,
+      iat: Time.now.to_i,
       nonce_supported: true,
       email: 'something@privatrerelay.appleid.com',
       email_verified: true,
@@ -303,6 +303,47 @@ describe OmniAuth::Strategies::Apple do
 
       it 'should return the true email' do
         expect(subject.info[:email]).to eq('something@privatrerelay.appleid.com')
+      end
+    end
+
+    context 'when only first name is provided' do
+      before do
+        request.params['user'] = {
+          name: {
+            firstName: 'first'
+          },
+          email: 'something@privatrerelay.appleid.com'
+        }.to_json
+      end
+
+      it 'should return nil for first_name' do
+        expect(subject.info[:first_name]).to eq 'first'
+      end
+
+      it 'should return nil for last_name' do
+        expect(subject.info[:last_name]).to be_nil
+      end
+
+      it 'should return empty string for name' do
+        expect(subject.info[:name]).to eq 'first'
+      end
+    end
+
+    context 'when no name info is provided' do
+      before do
+        request.params.delete('user')
+      end
+
+      it 'should return nil for first_name' do
+        expect(subject.info[:first_name]).to be_nil
+      end
+
+      it 'should return nil for last_name' do
+        expect(subject.info[:last_name]).to be_nil
+      end
+
+      it 'should return empty string for name' do
+        expect(subject.info[:name]).to be_nil
       end
     end
   end

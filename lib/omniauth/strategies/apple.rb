@@ -30,7 +30,7 @@ module OmniAuth
           email: email,
           first_name: first_name,
           last_name: last_name,
-          name: (first_name || last_name) ? [first_name, last_name].join(' ') : email,
+          name: [first_name, last_name].compact.join(' '),
           email_verified: email_verified,
           is_private_email: is_private_email
         )
