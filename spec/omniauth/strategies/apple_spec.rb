@@ -19,16 +19,16 @@ describe OmniAuth::Strategies::Apple do
   let(:apple_key) { OpenSSL::PKey::RSA.generate(1024) }
   let(:auth_keys) do
     {
-        keys: [
-            {
-                kty: "RSA",
-                kid: "1",
-                use: "sig",
-                alg: "RS256",
-                n: Base64.urlsafe_encode64(apple_key.n.to_s(2)),
-                e: Base64.urlsafe_encode64(apple_key.e.to_s(2)),
-            }
-        ]
+      keys: [
+        {
+          kty: "RSA",
+          kid: "1",
+          use: "sig",
+          alg: "RS256",
+          n: Base64.urlsafe_encode64(apple_key.n.to_s(2)),
+          e: Base64.urlsafe_encode64(apple_key.e.to_s(2)),
+        }
+      ]
     }
   end
   let(:kid)  do
